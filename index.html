@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抖音账号运营仪表盘</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f6fa; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px 30px; border-radius: 12px; margin-bottom: 25px; }
+        .header h1 { font-size: 24px; margin-bottom: 5px; }
+        .header p { opacity: 0.9; font-size: 14px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .stat-card .label { color: #666; font-size: 13px; margin-bottom: 8px; }
+        .stat-card .value { font-size: 28px; font-weight: bold; color: #333; }
+        .stat-card .sub { font-size: 12px; color: #999; margin-top: 5px; }
+        .chart-container { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 25px; }
+        .chart-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px; }
+        .table-container { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow-x: auto; }
+        .table-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background: #f8f9fa; padding: 12px 10px; text-align: left; font-weight: 600; color: #333; border-bottom: 2px solid #e9ecef; position: sticky; top: 0; }
+        td { padding: 10px; border-bottom: 1px solid #f0f0f0; color: #555; }
+        tr:hover { background: #f8f9fa; }
+        .account-name { font-weight: 500; color: #333; }
+        .orders { text-align: center; font-weight: 500; }
+        .orders.high { color: #28a745; }
+        .orders.low { color: #dc3545; }
+        .orders.medium { color: #ffc107; }
+        .total-orders { font-weight: bold; color: #667eea; }
+        .filter-bar { margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .filter-bar input, .filter-bar select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+        .filter-bar input { width: 200px; }
+        .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        @media (max-width: 900px) { .charts-row { grid-template-columns: 1fr; } }
+        .trend-cell { font-size: 11px; color: #999; max-width: 80px; overflow: hidden; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 抖音账号运营仪表盘</h1>
+        <p>统计周期：2026年4月27日 - 5月3日 | 共 <span id="accountCount">-</span> 个账号</p>
+    </div>
+    
+    <div class="stats" id="statsCards"></div>
+    
+    <div class="charts-row">
+        <div class="chart-container">
+            <div class="chart-title">📈 每日总订单趋势</div>
+            <canvas id="dailyTrendChart"></canvas>
+        </div>
+        <div class="chart-container">
+            <div class="chart-title">🏆 Top 10 账号对比</div>
+            <canvas id="top10Chart"></canvas>
+        </div>
+    </div>
+    
+    <div class="chart-container">
+        <div class="chart-title">📊 各账号每日订单热力图</div>
+        <canvas id="heatmapChart" height="400"></canvas>
+    </div>
+    
+    <div class="table-container">
+        <div class="table-title">📋 账号数据明细</div>
+        <div class="filter-bar">
+            <input type="text" id="searchInput" placeholder="搜索账号名称..." oninput="filterTable()">
+            <select id="operatorFilter" onchange="filterTable()">
+                <option value="">全部运营人</option>
+            </select>
+            <select id="sortSelect" onchange="sortTable()">
+                <option value="totalOrders-desc">按总订单 ↓</option>
+                <option value="totalOrders-asc">按总订单 ↑</option>
+                <option value="totalIncome-desc">按总收入 ↓</option>
+                <option value="totalIncome-asc">按总收入 ↑</option>
+            </select>
+        </div>
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>编号</th><th>账号名称</th><th>运营人</th><th>7天总订单</th><th>7天总收入</th><th>日均</th><th>趋势</th>
+                    <th>4/27</th><th>4/28</th><th>4/29</th><th>4/30</th><th>5/1</th><th>5/2</th><th>5/3</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+    
+    <script>
+    const dashboardData = {"accounts": [{"account": "雾凇好物()", "operator": "素材", "totalOrders": 1699, "totalIncome": 839.4, "avgDaily": 242.7, "daily": {"2026-04-27": 543, "2026-04-28": 300, "2026-04-29": 196, "2026-04-30": 209, "2026-05-01": 159, "2026-05-02": 107, "2026-05-03": 185}}, {"account": "盐风百货()", "operator": "素材", "totalOrders": 588, "totalIncome": 2738.0, "avgDaily": 84.0, "daily": {"2026-04-27": 135, "2026-04-28": 184, "2026-04-29": 201, "2026-04-30": 54, "2026-05-01": 8, "2026-05-02": 3, "2026-05-03": 3}}, {"account": "风语好物()", "operator": "混剪", "totalOrders": 525, "totalIncome": 355.72, "avgDaily": 75.0, "daily": {"2026-04-27": 120, "2026-04-28": 80, "2026-04-29": 72, "2026-04-30": 84, "2026-05-01": 53, "2026-05-02": 64, "2026-05-03": 52}}, {"account": "香初优品()", "operator": "素材", "totalOrders": 420, "totalIncome": 1393.9, "avgDaily": 60.0, "daily": {"2026-04-27": 56, "2026-04-28": 60, "2026-04-29": 81, "2026-04-30": 61, "2026-05-01": 42, "2026-05-02": 45, "2026-05-03": 75}}, {"account": "静幽好物()", "operator": "补过素材", "totalOrders": 376, "totalIncome": 2699.05, "avgDaily": 53.7, "daily": {"2026-04-27": 3, "2026-04-28": 7, "2026-04-29": 34, "2026-04-30": 32, "2026-05-01": 43, "2026-05-02": 73, "2026-05-03": 184}}, {"account": "听风百货()", "operator": "素材", "totalOrders": 359, "totalIncome": 1307.09, "avgDaily": 51.3, "daily": {"2026-04-27": 57, "2026-04-28": 56, "2026-04-29": 51, "2026-04-30": 54, "2026-05-01": 67, "2026-05-02": 35, "2026-05-03": 39}}, {"account": "江心好物()", "operator": "混剪", "totalOrders": 311, "totalIncome": 610.24, "avgDaily": 44.4, "daily": {"2026-04-27": 90, "2026-04-28": 49, "2026-04-29": 44, "2026-04-30": 40, "2026-05-01": 30, "2026-05-02": 36, "2026-05-03": 22}}, {"account": "燕语优品()", "operator": "混剪", "totalOrders": 309, "totalIncome": 707.25, "avgDaily": 44.1, "daily": {"2026-04-27": 13, "2026-04-28": 18, "2026-04-29": 204, "2026-04-30": 28, "2026-05-01": 11, "2026-05-02": 15, "2026-05-03": 20}}, {"account": "时光优品铺()", "operator": "混剪", "totalOrders": 285, "totalIncome": 554.23, "avgDaily": 40.7, "daily": {"2026-04-27": 39, "2026-04-28": 54, "2026-04-29": 44, "2026-04-30": 24, "2026-05-01": 32, "2026-05-02": 48, "2026-05-03": 44}}, {"account": "暗香优品()", "operator": "补过素材", "totalOrders": 267, "totalIncome": 2888.71, "avgDaily": 38.1, "daily": {"2026-04-27": 5, "2026-04-28": 19, "2026-04-29": 86, "2026-04-30": 82, "2026-05-01": 23, "2026-05-02": 26, "2026-05-03": 26}}, {"account": "次元优选()", "operator": "混剪", "totalOrders": 233, "totalIncome": 448.64, "avgDaily": 33.3, "daily": {"2026-04-27": 41, "2026-04-28": 55, "2026-04-29": 33, "2026-04-30": 23, "2026-05-01": 28, "2026-05-02": 32, "2026-05-03": 21}}, {"account": "湖畔甄选()", "operator": "混剪", "totalOrders": 195, "totalIncome": 412.04, "avgDaily": 27.9, "daily": {"2026-04-27": 41, "2026-04-28": 33, "2026-04-29": 28, "2026-04-30": 18, "2026-05-01": 30, "2026-05-02": 27, "2026-05-03": 18}}, {"account": "雨墨优品()", "operator": "补过素材", "totalOrders": 192, "totalIncome": 884.87, "avgDaily": 27.4, "daily": {"2026-04-27": 38, "2026-04-28": 41, "2026-04-29": 14, "2026-04-30": 50, "2026-05-01": 13, "2026-05-02": 12, "2026-05-03": 24}}, {"account": "飞雪甄选()", "operator": "混剪", "totalOrders": 183, "totalIncome": 747.23, "avgDaily": 26.1, "daily": {"2026-04-27": 19, "2026-04-28": 32, "2026-04-29": 22, "2026-04-30": 26, "2026-05-01": 33, "2026-05-02": 23, "2026-05-03": 28}}, {"account": "苔衣精选()", "operator": "混剪", "totalOrders": 157, "totalIncome": 305.11, "avgDaily": 22.4, "daily": {"2026-04-27": 33, "2026-04-28": 43, "2026-04-29": 11, "2026-04-30": 12, "2026-05-01": 11, "2026-05-02": 28, "2026-05-03": 19}}, {"account": "晓梦优品()", "operator": "混剪", "totalOrders": 156, "totalIncome": 601.02, "avgDaily": 22.3, "daily": {"2026-04-27": 21, "2026-04-28": 33, "2026-04-29": 22, "2026-04-30": 22, "2026-05-01": 19, "2026-05-02": 23, "2026-05-03": 16}}, {"account": "巧思甄选()", "operator": "混剪", "totalOrders": 151, "totalIncome": 319.11, "avgDaily": 21.6, "daily": {"2026-04-27": 27, "2026-04-28": 22, "2026-04-29": 23, "2026-04-30": 19, "2026-05-01": 14, "2026-05-02": 18, "2026-05-03": 28}}, {"account": "翠微好物()", "operator": "混剪", "totalOrders": 148, "totalIncome": 338.47, "avgDaily": 21.1, "daily": {"2026-04-27": 21, "2026-04-28": 33, "2026-04-29": 21, "2026-04-30": 24, "2026-05-01": 16, "2026-05-02": 14, "2026-05-03": 19}}, {"account": "清风好物铺()", "operator": "混剪", "totalOrders": 146, "totalIncome": 454.91, "avgDaily": 20.9, "daily": {"2026-04-27": 36, "2026-04-28": 35, "2026-04-29": 16, "2026-04-30": 17, "2026-05-01": 16, "2026-05-02": 11, "2026-05-03": 15}}, {"account": "阿梨甄选()", "operator": "补过素材", "totalOrders": 141, "totalIncome": 274.59, "avgDaily": 20.1, "daily": {"2026-04-27": 25, "2026-04-28": 25, "2026-04-29": 20, "2026-04-30": 18, "2026-05-01": 16, "2026-05-02": 20, "2026-05-03": 17}}, {"account": "玉叶好物()", "operator": "混剪", "totalOrders": 134, "totalIncome": 318.15, "avgDaily": 19.1, "daily": {"2026-04-27": 0, "2026-04-28": 68, "2026-04-29": 21, "2026-04-30": 12, "2026-05-01": 13, "2026-05-02": 12, "2026-05-03": 8}}, {"account": "沛灵甄选()", "operator": "素材", "totalOrders": 133, "totalIncome": 2022.07, "avgDaily": 19.0, "daily": {"2026-04-27": 8, "2026-04-28": 19, "2026-04-29": 65, "2026-04-30": 11, "2026-05-01": 18, "2026-05-02": 7, "2026-05-03": 5}}, {"account": "云水优品()", "operator": "十二", "totalOrders": 128, "totalIncome": 498.22, "avgDaily": 18.3, "daily": {"2026-04-27": 22, "2026-04-28": 18, "2026-04-29": 20, "2026-04-30": 20, "2026-05-01": 19, "2026-05-02": 16, "2026-05-03": 13}}, {"account": "云天优品()", "operator": "补过素材", "totalOrders": 121, "totalIncome": 420.39, "avgDaily": 17.3, "daily": {"2026-04-27": 7, "2026-04-28": 7, "2026-04-29": 27, "2026-04-30": 19, "2026-05-01": 21, "2026-05-02": 15, "2026-05-03": 25}}, {"account": "元瑶甄选()", "operator": "十二", "totalOrders": 119, "totalIncome": 1357.13, "avgDaily": 17.0, "daily": {"2026-04-27": 15, "2026-04-28": 11, "2026-04-29": 22, "2026-04-30": 14, "2026-05-01": 22, "2026-05-02": 17, "2026-05-03": 18}}, {"account": "雪月好物()", "operator": "混剪", "totalOrders": 113, "totalIncome": 199.05, "avgDaily": 16.1, "daily": {"2026-04-27": 17, "2026-04-28": 21, "2026-04-29": 21, "2026-04-30": 16, "2026-05-01": 14, "2026-05-02": 17, "2026-05-03": 7}}, {"account": "霁月优品铺()", "operator": "混剪", "totalOrders": 108, "totalIncome": 284.34, "avgDaily": 15.4, "daily": {"2026-04-27": 22, "2026-04-28": 14, "2026-04-29": 16, "2026-04-30": 7, "2026-05-01": 15, "2026-05-02": 15, "2026-05-03": 19}}, {"account": "青林优品()", "operator": "补过素材", "totalOrders": 103, "totalIncome": 309.99, "avgDaily": 14.7, "daily": {"2026-04-27": 24, "2026-04-28": 26, "2026-04-29": 13, "2026-04-30": 7, "2026-05-01": 8, "2026-05-02": 18, "2026-05-03": 7}}, {"account": "云深好物()", "operator": "混剪", "totalOrders": 101, "totalIncome": 694.54, "avgDaily": 14.4, "daily": {"2026-04-27": 21, "2026-04-28": 25, "2026-04-29": 12, "2026-04-30": 15, "2026-05-01": 8, "2026-05-02": 10, "2026-05-03": 10}}, {"account": "赏心优品()", "operator": "混剪", "totalOrders": 99, "totalIncome": 374.66, "avgDaily": 14.1, "daily": {"2026-04-27": 36, "2026-04-28": 17, "2026-04-29": 15, "2026-04-30": 8, "2026-05-01": 12, "2026-05-02": 6, "2026-05-03": 5}}, {"account": "季风精选馆()", "operator": "混剪", "totalOrders": 98, "totalIncome": 393.04, "avgDaily": 14.0, "daily": {"2026-04-27": 8, "2026-04-28": 18, "2026-04-29": 21, "2026-04-30": 9, "2026-05-01": 10, "2026-05-02": 12, "2026-05-03": 20}}, {"account": "芸橙优选()", "operator": "混剪", "totalOrders": 96, "totalIncome": 336.08, "avgDaily": 13.7, "daily": {"2026-04-27": 19, "2026-04-28": 21, "2026-04-29": 12, "2026-04-30": 11, "2026-05-01": 12, "2026-05-02": 12, "2026-05-03": 9}}, {"account": "星夏甄选()", "operator": "混剪", "totalOrders": 94, "totalIncome": 249.22, "avgDaily": 13.4, "daily": {"2026-04-27": 6, "2026-04-28": 10, "2026-04-29": 11, "2026-04-30": 20, "2026-05-01": 20, "2026-05-02": 15, "2026-05-03": 12}}, {"account": "轻奢优品阁()", "operator": "混剪", "totalOrders": 93, "totalIncome": 306.11, "avgDaily": 13.3, "daily": {"2026-04-27": 16, "2026-04-28": 23, "2026-04-29": 12, "2026-04-30": 9, "2026-05-01": 9, "2026-05-02": 10, "2026-05-03": 14}}, {"account": "雨市好物()", "operator": "补过素材", "totalOrders": 91, "totalIncome": 295.01, "avgDaily": 13.0, "daily": {"2026-04-27": 9, "2026-04-28": 17, "2026-04-29": 16, "2026-04-30": 13, "2026-05-01": 14, "2026-05-02": 10, "2026-05-03": 12}}, {"account": "琼枝好物()", "operator": "素材", "totalOrders": 84, "totalIncome": 196.8, "avgDaily": 12.0, "daily": {"2026-04-27": 27, "2026-04-28": 14, "2026-04-29": 24, "2026-04-30": 11, "2026-05-01": 3, "2026-05-02": 3, "2026-05-03": 2}}, {"account": "落霞优品舍()", "operator": "十二", "totalOrders": 81, "totalIncome": 234.41, "avgDaily": 11.6, "daily": {"2026-04-27": 13, "2026-04-28": 23, "2026-04-29": 16, "2026-04-30": 7, "2026-05-01": 6, "2026-05-02": 7, "2026-05-03": 9}}, {"account": "锦汐甄选()", "operator": "十二", "totalOrders": 77, "totalIncome": 374.42, "avgDaily": 11.0, "daily": {"2026-04-27": 19, "2026-04-28": 18, "2026-04-29": 7, "2026-04-30": 10, "2026-05-01": 9, "2026-05-02": 7, "2026-05-03": 7}}, {"account": "月下优品()", "operator": "混剪", "totalOrders": 73, "totalIncome": 140.75, "avgDaily": 10.4, "daily": {"2026-04-27": 8, "2026-04-28": 11, "2026-04-29": 11, "2026-04-30": 12, "2026-05-01": 11, "2026-05-02": 9, "2026-05-03": 11}}, {"account": "知秋好物推荐()", "operator": "混剪", "totalOrders": 71, "totalIncome": 116.4, "avgDaily": 10.1, "daily": {"2026-04-27": 7, "2026-04-28": 13, "2026-04-29": 6, "2026-04-30": 10, "2026-05-01": 15, "2026-05-02": 12, "2026-05-03": 8}}, {"account": "初雨甄选()", "operator": "混剪", "totalOrders": 70, "totalIncome": 349.18, "avgDaily": 10.0, "daily": {"2026-04-27": 11, "2026-04-28": 5, "2026-04-29": 18, "2026-04-30": 7, "2026-05-01": 15, "2026-05-02": 11, "2026-05-03": 3}}, {"account": "碧落好物()", "operator": "补过素材", "totalOrders": 69, "totalIncome": 394.36, "avgDaily": 9.9, "daily": {"2026-04-27": 9, "2026-04-28": 28, "2026-04-29": 6, "2026-04-30": 11, "2026-05-01": 5, "2026-05-02": 5, "2026-05-03": 5}}, {"account": "时宜甄选()", "operator": "混剪", "totalOrders": 65, "totalIncome": 117.57, "avgDaily": 9.3, "daily": {"2026-04-27": 12, "2026-04-28": 9, "2026-04-29": 5, "2026-04-30": 10, "2026-05-01": 9, "2026-05-02": 12, "2026-05-03": 8}}, {"account": "星云好物铺()", "operator": "补过素材", "totalOrders": 65, "totalIncome": 436.14, "avgDaily": 9.3, "daily": {"2026-04-27": 9, "2026-04-28": 26, "2026-04-29": 10, "2026-04-30": 3, "2026-05-01": 8, "2026-05-02": 8, "2026-05-03": 1}}, {"account": "西柚的小铺()", "operator": "混剪", "totalOrders": 63, "totalIncome": 224.28, "avgDaily": 9.0, "daily": {"2026-04-27": 13, "2026-04-28": 16, "2026-04-29": 11, "2026-04-30": 6, "2026-05-01": 3, "2026-05-02": 3, "2026-05-03": 11}}, {"account": "香山好物()", "operator": "混剪", "totalOrders": 63, "totalIncome": 239.1, "avgDaily": 9.0, "daily": {"2026-04-27": 11, "2026-04-28": 10, "2026-04-29": 4, "2026-04-30": 6, "2026-05-01": 9, "2026-05-02": 10, "2026-05-03": 13}}, {"account": "惠琪好物()", "operator": "素材", "totalOrders": 60, "totalIncome": 385.33, "avgDaily": 8.6, "daily": {"2026-04-27": 12, "2026-04-28": 4, "2026-04-29": 6, "2026-04-30": 6, "2026-05-01": 9, "2026-05-02": 16, "2026-05-03": 7}}, {"account": "晚凉好物店()", "operator": "混剪", "totalOrders": 57, "totalIncome": 172.45, "avgDaily": 8.1, "daily": {"2026-04-27": 6, "2026-04-28": 9, "2026-04-29": 9, "2026-04-30": 6, "2026-05-01": 10, "2026-05-02": 8, "2026-05-03": 9}}, {"account": "桐花好物()", "operator": "十二", "totalOrders": 57, "totalIncome": 110.57, "avgDaily": 8.1, "daily": {"2026-04-27": 10, "2026-04-28": 16, "2026-04-29": 4, "2026-04-30": 6, "2026-05-01": 8, "2026-05-02": 9, "2026-05-03": 4}}, {"account": "烟雨好物铺()", "operator": "混剪", "totalOrders": 57, "totalIncome": 132.32, "avgDaily": 8.1, "daily": {"2026-04-27": 9, "2026-04-28": 9, "2026-04-29": 5, "2026-04-30": 4, "2026-05-01": 10, "2026-05-02": 13, "2026-05-03": 7}}, {"account": "星河好物馆()", "operator": "混剪", "totalOrders": 56, "totalIncome": 144.56, "avgDaily": 8.0, "daily": {"2026-04-27": 3, "2026-04-28": 9, "2026-04-29": 9, "2026-04-30": 6, "2026-05-01": 11, "2026-05-02": 9, "2026-05-03": 9}}, {"account": "玻璃海商店()", "operator": "混剪", "totalOrders": 55, "totalIncome": 219.28, "avgDaily": 7.9, "daily": {"2026-04-27": 7, "2026-04-28": 15, "2026-04-29": 7, "2026-04-30": 1, "2026-05-01": 8, "2026-05-02": 8, "2026-05-03": 9}}, {"account": "羽洛好物铺()", "operator": "混剪", "totalOrders": 55, "totalIncome": 187.51, "avgDaily": 7.9, "daily": {"2026-04-27": 11, "2026-04-28": 10, "2026-04-29": 11, "2026-04-30": 10, "2026-05-01": 5, "2026-05-02": 3, "2026-05-03": 5}}, {"account": "浮岛百货()", "operator": "补过素材", "totalOrders": 54, "totalIncome": 165.46, "avgDaily": 7.7, "daily": {"2026-04-27": 2, "2026-04-28": 3, "2026-04-29": 9, "2026-04-30": 8, "2026-05-01": 9, "2026-05-02": 11, "2026-05-03": 12}}, {"account": "光遇优品()", "operator": "补过素材", "totalOrders": 50, "totalIncome": 287.39, "avgDaily": 7.1, "daily": {"2026-04-27": 2, "2026-04-28": 8, "2026-04-29": 28, "2026-04-30": 4, "2026-05-01": 1, "2026-05-02": 6, "2026-05-03": 1}}, {"account": "清昕小铺()", "operator": "混剪", "totalOrders": 50, "totalIncome": 192.49, "avgDaily": 7.1, "daily": {"2026-04-27": 21, "2026-04-28": 7, "2026-04-29": 9, "2026-04-30": 2, "2026-05-01": 3, "2026-05-02": 3, "2026-05-03": 5}}, {"account": "青森好物铺()", "operator": "十二", "totalOrders": 50, "totalIncome": 227.72, "avgDaily": 7.1, "daily": {"2026-04-27": 5, "2026-04-28": 4, "2026-04-29": 14, "2026-04-30": 8, "2026-05-01": 6, "2026-05-02": 8, "2026-05-03": 5}}, {"account": "琉光优品()", "operator": "补过素材", "totalOrders": 48, "totalIncome": 335.39, "avgDaily": 6.9, "daily": {"2026-04-27": 4, "2026-04-28": 4, "2026-04-29": 15, "2026-04-30": 10, "2026-05-01": 2, "2026-05-02": 7, "2026-05-03": 6}}, {"account": "薄暮百货()", "operator": "混剪", "totalOrders": 48, "totalIncome": 184.88, "avgDaily": 6.9, "daily": {"2026-04-27": 15, "2026-04-28": 8, "2026-04-29": 7, "2026-04-30": 2, "2026-05-01": 4, "2026-05-02": 9, "2026-05-03": 3}}, {"account": "甜桃好物()", "operator": "混剪", "totalOrders": 47, "totalIncome": 101.37, "avgDaily": 6.7, "daily": {"2026-04-27": 4, "2026-04-28": 9, "2026-04-29": 6, "2026-04-30": 7, "2026-05-01": 5, "2026-05-02": 10, "2026-05-03": 6}}, {"account": "海平好物()", "operator": "混剪", "totalOrders": 46, "totalIncome": 142.56, "avgDaily": 6.6, "daily": {"2026-04-27": 8, "2026-04-28": 14, "2026-04-29": 7, "2026-04-30": 7, "2026-05-01": 1, "2026-05-02": 1, "2026-05-03": 8}}, {"account": "飞云好物铺()", "operator": "素材", "totalOrders": 46, "totalIncome": 214.85, "avgDaily": 6.6, "daily": {"2026-04-27": 12, "2026-04-28": 18, "2026-04-29": 4, "2026-04-30": 3, "2026-05-01": 1, "2026-05-02": 4, "2026-05-03": 4}}, {"account": "七日好物()", "operator": "混剪", "totalOrders": 45, "totalIncome": 192.63, "avgDaily": 6.4, "daily": {"2026-04-27": 4, "2026-04-28": 8, "2026-04-29": 6, "2026-04-30": 8, "2026-05-01": 10, "2026-05-02": 4, "2026-05-03": 5}}, {"account": "万水百货优选()", "operator": "补过素材", "totalOrders": 45, "totalIncome": 90.33, "avgDaily": 6.4, "daily": {"2026-04-27": 14, "2026-04-28": 9, "2026-04-29": 4, "2026-04-30": 7, "2026-05-01": 2, "2026-05-02": 5, "2026-05-03": 4}}, {"account": "幽兰好物()", "operator": "混剪", "totalOrders": 44, "totalIncome": 127.94, "avgDaily": 6.3, "daily": {"2026-04-27": 8, "2026-04-28": 14, "2026-04-29": 2, "2026-04-30": 3, "2026-05-01": 5, "2026-05-02": 6, "2026-05-03": 6}}, {"account": "竹影好物分享()", "operator": "十二", "totalOrders": 44, "totalIncome": 218.54, "avgDaily": 6.3, "daily": {"2026-04-27": 9, "2026-04-28": 13, "2026-04-29": 8, "2026-04-30": 3, "2026-05-01": 4, "2026-05-02": 2, "2026-05-03": 5}}, {"account": "绿洲优品()", "operator": "补过素材", "totalOrders": 44, "totalIncome": 118.73, "avgDaily": 6.3, "daily": {"2026-04-27": 8, "2026-04-28": 11, "2026-04-29": 10, "2026-04-30": 4, "2026-05-01": 3, "2026-05-02": 3, "2026-05-03": 5}}, {"account": "星空好物铺()", "operator": "补过素材", "totalOrders": 43, "totalIncome": 174.09, "avgDaily": 6.1, "daily": {"2026-04-27": 2, "2026-04-28": 11, "2026-04-29": 11, "2026-04-30": 16, "2026-05-01": 1, "2026-05-02": 1, "2026-05-03": 1}}, {"account": "如梦甄选()", "operator": "混剪", "totalOrders": 42, "totalIncome": 139.21, "avgDaily": 6.0, "daily": {"2026-04-27": 4, "2026-04-28": 6, "2026-04-29": 4, "2026-04-30": 11, "2026-05-01": 3, "2026-05-02": 7, "2026-05-03": 7}}, {"account": "宋玉甄选()", "operator": "十二", "totalOrders": 41, "totalIncome": 205.43, "avgDaily": 5.9, "daily": {"2026-04-27": 24, "2026-04-28": 9, "2026-04-29": 3, "2026-04-30": 1, "2026-05-01": 1, "2026-05-02": 2, "2026-05-03": 1}}, {"account": "绿松甄选()", "operator": "混剪", "totalOrders": 41, "totalIncome": 136.93, "avgDaily": 5.9, "daily": {"2026-04-27": 17, "2026-04-28": 9, "2026-04-29": 1, "2026-04-30": 3, "2026-05-01": 4, "2026-05-02": 4, "2026-05-03": 3}}, {"account": "月光优品铺()", "operator": "混剪", "totalOrders": 40, "totalIncome": 80.28, "avgDaily": 5.7, "daily": {"2026-04-27": 8, "2026-04-28": 13, "2026-04-29": 7, "2026-04-30": 1, "2026-05-01": 4, "2026-05-02": 2, "2026-05-03": 5}}, {"account": "沛绿百货分享()", "operator": "混剪", "totalOrders": 40, "totalIncome": 147.78, "avgDaily": 5.7, "daily": {"2026-04-27": 3, "2026-04-28": 7, "2026-04-29": 7, "2026-04-30": 7, "2026-05-01": 6, "2026-05-02": 6, "2026-05-03": 4}}, {"account": "晚霞优品()", "operator": "十二", "totalOrders": 38, "totalIncome": 179.34, "avgDaily": 5.4, "daily": {"2026-04-27": 11, "2026-04-28": 10, "2026-04-29": 9, "2026-04-30": 4, "2026-05-01": 2, "2026-05-02": 1, "2026-05-03": 1}}, {"account": "林森优品()", "operator": "混剪", "totalOrders": 38, "totalIncome": 79.81, "avgDaily": 5.4, "daily": {"2026-04-27": 14, "2026-04-28": 8, "2026-04-29": 1, "2026-04-30": 4, "2026-05-01": 6, "2026-05-02": 2, "2026-05-03": 3}}, {"account": "拾光百货店()", "operator": "混剪", "totalOrders": 35, "totalIncome": 90.5, "avgDaily": 5.0, "daily": {"2026-04-27": 4, "2026-04-28": 4, "2026-04-29": 1, "2026-04-30": 7, "2026-05-01": 6, "2026-05-02": 6, "2026-05-03": 7}}, {"account": "水韵臻品铺()", "operator": "十二", "totalOrders": 34, "totalIncome": 166.33, "avgDaily": 4.9, "daily": {"2026-04-27": 7, "2026-04-28": 6, "2026-04-29": 5, "2026-04-30": 8, "2026-05-01": 3, "2026-05-02": 1, "2026-05-03": 4}}, {"account": "雅集优选()", "operator": "混剪", "totalOrders": 34, "totalIncome": 298.69, "avgDaily": 4.9, "daily": {"2026-04-27": 8, "2026-04-28": 3, "2026-04-29": 8, "2026-04-30": 2, "2026-05-01": 10, "2026-05-02": 3, "2026-05-03": 0}}, {"account": "潮汐优品()", "operator": "补过素材", "totalOrders": 33, "totalIncome": 146.44, "avgDaily": 4.7, "daily": {"2026-04-27": 7, "2026-04-28": 9, "2026-04-29": 1, "2026-04-30": 2, "2026-05-01": 4, "2026-05-02": 7, "2026-05-03": 3}}, {"account": "锡月生活坊()", "operator": "补过素材", "totalOrders": 31, "totalIncome": 79.02, "avgDaily": 4.4, "daily": {"2026-04-27": 7, "2026-04-28": 3, "2026-04-29": 6, "2026-04-30": 2, "2026-05-01": 4, "2026-05-02": 4, "2026-05-03": 5}}, {"account": "阡陌好物推荐()", "operator": "混剪", "totalOrders": 31, "totalIncome": 96.52, "avgDaily": 4.4, "daily": {"2026-04-27": 15, "2026-04-28": 5, "2026-04-29": 6, "2026-04-30": 0, "2026-05-01": 4, "2026-05-02": 0, "2026-05-03": 1}}, {"account": "多宝严选()", "operator": "补过素材", "totalOrders": 29, "totalIncome": 450.58, "avgDaily": 4.1, "daily": {"2026-04-27": 13, "2026-04-28": 5, "2026-04-29": 7, "2026-04-30": 0, "2026-05-01": 2, "2026-05-02": 1, "2026-05-03": 1}}, {"account": "星苔百货()", "operator": "混剪", "totalOrders": 26, "totalIncome": 64.38, "avgDaily": 3.7, "daily": {"2026-04-27": 5, "2026-04-28": 3, "2026-04-29": 4, "2026-04-30": 5, "2026-05-01": 1, "2026-05-02": 1, "2026-05-03": 7}}, {"account": "星辰好物铺()", "operator": "混剪", "totalOrders": 26, "totalIncome": 23.26, "avgDaily": 3.7, "daily": {"2026-04-27": 6, "2026-04-28": 2, "2026-04-29": 2, "2026-04-30": 4, "2026-05-01": 3, "2026-05-02": 5, "2026-05-03": 4}}, {"account": "温莎好物()", "operator": "补过素材", "totalOrders": 26, "totalIncome": 122.61, "avgDaily": 3.7, "daily": {"2026-04-27": 1, "2026-04-28": 3, "2026-04-29": 8, "2026-04-30": 2, "2026-05-01": 3, "2026-05-02": 6, "2026-05-03": 3}}, {"account": "鹿屿甄选()", "operator": "混剪", "totalOrders": 26, "totalIncome": 180.93, "avgDaily": 3.7, "daily": {"2026-04-27": 1, "2026-04-28": 6, "2026-04-29": 2, "2026-04-30": 4, "2026-05-01": 2, "2026-05-02": 4, "2026-05-03": 7}}, {"account": "知画小铺()", "operator": "混剪", "totalOrders": 22, "totalIncome": 99.15, "avgDaily": 3.1, "daily": {"2026-04-27": 1, "2026-04-28": 10, "2026-04-29": 8, "2026-04-30": 2, "2026-05-01": 0, "2026-05-02": 0, "2026-05-03": 1}}, {"account": "紫霄严选()", "operator": "混剪", "totalOrders": 22, "totalIncome": 78.75, "avgDaily": 3.1, "daily": {"2026-04-27": 2, "2026-04-28": 7, "2026-04-29": 0, "2026-04-30": 6, "2026-05-01": 2, "2026-05-02": 3, "2026-05-03": 2}}, {"account": "银月甄选()", "operator": "混剪", "totalOrders": 22, "totalIncome": 77.94, "avgDaily": 3.1, "daily": {"2026-04-27": 0, "2026-04-28": 5, "2026-04-29": 1, "2026-04-30": 6, "2026-05-01": 2, "2026-05-02": 2, "2026-05-03": 6}}, {"account": "时差好物分享()", "operator": "混剪", "totalOrders": 21, "totalIncome": 88.84, "avgDaily": 3.0, "daily": {"2026-04-27": 4, "2026-04-28": 2, "2026-04-29": 3, "2026-04-30": 0, "2026-05-01": 5, "2026-05-02": 5, "2026-05-03": 2}}, {"account": "木槿好物分享()", "operator": "十二", "totalOrders": 20, "totalIncome": 54.88, "avgDaily": 2.9, "daily": {"2026-04-27": 3, "2026-04-28": 2, "2026-04-29": 7, "2026-04-30": 5, "2026-05-01": 1, "2026-05-02": 2, "2026-05-03": 0}}, {"account": "玉兰好物分享()", "operator": "混剪", "totalOrders": 18, "totalIncome": 18.43, "avgDaily": 2.6, "daily": {"2026-04-27": 3, "2026-04-28": 5, "2026-04-29": 5, "2026-04-30": 1, "2026-05-01": 2, "2026-05-02": 1, "2026-05-03": 1}}, {"account": "霜华优品()", "operator": "十二", "totalOrders": 18, "totalIncome": 164.8, "avgDaily": 2.6, "daily": {"2026-04-27": 5, "2026-04-28": 3, "2026-04-29": 3, "2026-04-30": 4, "2026-05-01": 1, "2026-05-02": 1, "2026-05-03": 1}}, {"account": "鲸落百货()", "operator": "混剪", "totalOrders": 16, "totalIncome": 120.3, "avgDaily": 2.3, "daily": {"2026-04-27": 0, "2026-04-28": 2, "2026-04-29": 3, "2026-04-30": 2, "2026-05-01": 5, "2026-05-02": 3, "2026-05-03": 1}}, {"account": "象限百货()", "operator": "混剪", "totalOrders": 15, "totalIncome": 63.74, "avgDaily": 2.1, "daily": {"2026-04-27": 0, "2026-04-28": 2, "2026-04-29": 2, "2026-04-30": 1, "2026-05-01": 4, "2026-05-02": 3, "2026-05-03": 3}}, {"account": "文雅好物铺()", "operator": "混剪", "totalOrders": 13, "totalIncome": 38.48, "avgDaily": 1.9, "daily": {"2026-04-27": 2, "2026-04-28": 8, "2026-04-29": 0, "2026-04-30": 0, "2026-05-01": 1, "2026-05-02": 2, "2026-05-03": 0}}, {"account": "璞玉优品()", "operator": "混剪", "totalOrders": 13, "totalIncome": 17.66, "avgDaily": 1.9, "daily": {"2026-04-27": 4, "2026-04-28": 2, "2026-04-29": 2, "2026-04-30": 0, "2026-05-01": 1, "2026-05-02": 2, "2026-05-03": 2}}, {"account": "山花好物推荐()", "operator": "混剪", "totalOrders": 11, "totalIncome": 20.89, "avgDaily": 1.6, "daily": {"2026-04-27": 7, "2026-04-28": 4, "2026-04-29": 0, "2026-04-30": 0, "2026-05-01": 0, "2026-05-02": 0, "2026-05-03": 0}}, {"account": "紫灵甄选()", "operator": "混剪", "totalOrders": 10, "totalIncome": 61.4, "avgDaily": 1.4, "daily": {"2026-04-27": 2, "2026-04-28": 1, "2026-04-29": 5, "2026-04-30": 1, "2026-05-01": 0, "2026-05-02": 1, "2026-05-03": 0}}, {"account": "岛风严选()", "operator": "混剪", "totalOrders": 8, "totalIncome": 44.21, "avgDaily": 1.1, "daily": {"2026-04-27": 1, "2026-04-28": 3, "2026-04-29": 0, "2026-04-30": 1, "2026-05-01": 0, "2026-05-02": 0, "2026-05-03": 3}}, {"account": "漫步优品()", "operator": "补过素材", "totalOrders": 8, "totalIncome": 27.2, "avgDaily": 1.1, "daily": {"2026-04-27": 1, "2026-04-28": 1, "2026-04-29": 2, "2026-04-30": 2, "2026-05-01": 2, "2026-05-02": 0, "2026-05-03": 0}}, {"account": "陆芝百货()", "operator": "补过素材", "totalOrders": 4, "totalIncome": 13.22, "avgDaily": 0.6, "daily": {"2026-04-27": 1, "2026-04-28": 0, "2026-04-29": 2, "2026-04-30": 0, "2026-05-01": 0, "2026-05-02": 1, "2026-05-03": 0}}, {"account": "星星百货推荐()", "operator": "补过素材", "totalOrders": 3, "totalIncome": 6.0, "avgDaily": 0.4, "daily": {"2026-04-27": 0, "2026-04-28": 0, "2026-04-29": 3, "2026-04-30": 0, "2026-05-01": 0, "2026-05-02": 0, "2026-05-03": 0}}, {"account": "雪松优品()", "operator": "混剪", "totalOrders": 2, "totalIncome": 6.54, "avgDaily": 0.3, "daily": {"2026-04-27": 1, "2026-04-28": 0, "2026-04-29": 0, "2026-04-30": 1, "2026-05-01": 0, "2026-05-02": 0, "2026-05-03": 0}}], "dates": ["2026-04-27", "2026-04-28", "2026-04-29", "2026-04-30", "2026-05-01", "2026-05-02", "2026-05-03"]};
+    
+    function init() {
+        document.getElementById('accountCount').textContent = dashboardData.accounts.length;
+        renderStats();
+        renderCharts();
+        renderTable();
+        populateFilters();
+    }
+    
+    function renderStats() {
+        const totalOrders = dashboardData.accounts.reduce((s, a) => s + a.totalOrders, 0);
+        const totalIncome = dashboardData.accounts.reduce((s, a) => s + a.totalIncome, 0);
+        const avgDaily = totalOrders / dashboardData.accounts.length / dashboardData.dates.length;
+        const top = dashboardData.accounts[0];
+        document.getElementById('statsCards').innerHTML = `
+            <div class="stat-card"><div class="label">7天总订单</div><div class="value">${totalOrders}</div><div class="sub">总商品销量</div></div>
+            <div class="stat-card"><div class="label">7天总收入</div><div class="value">¥${totalIncome.toFixed(2)}</div><div class="sub">预估收入合计</div></div>
+            <div class="stat-card"><div class="label">日均单量</div><div class="value">${avgDaily.toFixed(1)}</div><div class="sub">每账号每日平均</div></div>
+            <div class="stat-card"><div class="label">TOP 1 账号</div><div class="value" style="font-size:20px">${top.totalOrders}</div><div class="sub">${top.account.replace('()', '')}</div></div>
+        `;
+    }
+    
+    function renderCharts() {
+        const dailyTotals = {};
+        dashboardData.dates.forEach(d => dailyTotals[d] = 0);
+        dashboardData.accounts.forEach(a => { Object.entries(a.daily).forEach(([d, o]) => dailyTotals[d] += o); });
+        
+        new Chart(document.getElementById('dailyTrendChart'), {
+            type: 'line',
+            data: { labels: dashboardData.dates.map(d => d.slice(5).replace('-', '/')), datasets: [{ label: '每日订单', data: dashboardData.dates.map(d => dailyTotals[d]), borderColor: '#667eea', backgroundColor: 'rgba(102,126,234,0.1)', fill: true, tension: 0.4 }] },
+            options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+        
+        const top10 = dashboardData.accounts.slice(0, 10);
+        new Chart(document.getElementById('top10Chart'), {
+            type: 'bar',
+            data: { labels: top10.map(a => a.account.replace('()', '').substring(0, 8)), datasets: [{ label: '7天总订单', data: top10.map(a => a.totalOrders), backgroundColor: ['#667eea','#764ba2','#f093fb','#f5576c','#4facfe','#00f2fe','#43e97b','#38f9d7','#ff9a9e','#a18cd1'] }] },
+            options: { indexAxis: 'y', responsive: true }
+        });
+        
+        const colors = ['#667eea','#764ba2','#f093fb','#f5576c','#4facfe','#00f2fe','#43e97b','#38f9d7','#ff9a9e','#a18cd1','#667eea','#764ba2','#f093fb','#f5576c','#4facfe'];
+        const top15 = dashboardData.accounts.slice(0, 15);
+        new Chart(document.getElementById('heatmapChart'), {
+            type: 'line',
+            data: { labels: dashboardData.dates.map(d => d.slice(5).replace('-', '/')), datasets: top15.map((a, i) => ({ label: a.account.replace('()', '').substring(0, 6), data: dashboardData.dates.map(d => a.daily[d] || 0), borderColor: colors[i % colors.length], backgroundColor: 'transparent', tension: 0.4 })) },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+        });
+    }
+    
+    function populateFilters() {
+        const operators = [...new Set(dashboardData.accounts.map(a => a.operator))].filter(Boolean).sort();
+        operators.forEach(op => { const opt = document.createElement('option'); opt.value = op; opt.textContent = op; document.getElementById('operatorFilter').appendChild(opt); });
+    }
+    
+    function renderTable(data) {
+        const accounts = data || dashboardData.accounts;
+        document.getElementById('tableBody').innerHTML = accounts.map((a, i) => {
+            const dailyVals = dashboardData.dates.map(d => a.daily[d] || 0);
+            return `<tr>
+                <td>${i + 1}</td>
+                <td class="account-name">${a.account.replace('()', '')}</td>
+                <td>${a.operator}</td>
+                <td class="total-orders">${a.totalOrders}</td>
+                <td>¥${a.totalIncome.toFixed(2)}</td>
+                <td>${a.avgDaily}</td>
+                <td class="trend-cell">${dailyVals.join(' → ')}</td>
+                ${dailyVals.map(v => `<td class="orders ${v > 5 ? 'high' : v > 2 ? 'medium' : 'low'}">${v}</td>`).join('')}
+            </tr>`;
+        }).join('');
+    }
+    
+    function filterTable() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const operator = document.getElementById('operatorFilter').value;
+        const filtered = dashboardData.accounts.filter(a => a.account.toLowerCase().includes(search) && (!operator || a.operator === operator));
+        renderTable(filtered);
+    }
+    
+    function sortTable() {
+        const [field, dir] = document.getElementById('sortSelect').value.split('-');
+        const sorted = [...dashboardData.accounts].sort((a, b) => {
+            const va = field === 'totalOrders' ? a.totalOrders : a.totalIncome;
+            const vb = field === 'totalOrders' ? b.totalOrders : b.totalIncome;
+            return dir === 'desc' ? vb - va : va - vb;
+        });
+        renderTable(sorted);
+    }
+    
+    init();
+    </script>
+</body>
+</html>
