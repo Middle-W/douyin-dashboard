@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>抖音账号运营仪表盘</title>
+    <title>鎶栭煶璐﹀彿杩愯惀浠〃鐩?/title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -56,24 +56,24 @@
 </head>
 <body>
     <div class="header">
-        <h1>[DATA] 抖音账号运营仪表盘</h1>
-        <p id="subtitle">统计周期：<span id="dateRange">-</span> | 共 <span id="accountCount">-</span> 个账号</p>
-        <p class="update-info">数据更新时间：<span id="updateTime">-</span></p>
+        <h1>[DATA] 鎶栭煶璐﹀彿杩愯惀浠〃鐩?/h1>
+        <p id="subtitle">缁熻鍛ㄦ湡锛?span id="dateRange">-</span> | 鍏?<span id="accountCount">-</span> 涓处鍙?/p>
+        <p class="update-info">鏁版嵁鏇存柊鏃堕棿锛?span id="updateTime">-</span></p>
     </div>
     
     <div class="filter-bar-top">
-        <label>时间范围：</label>
+        <label>鏃堕棿鑼冨洿锛?/label>
         <select id="rangeSelect" onchange="changeRange()">
-            <option value="7">最近7天</option>
-            <option value="14">最近14天</option>
-            <option value="30" selected>最近30天</option>
-            <option value="all">全部时间</option>
-            <option value="custom">自定义范围</option>
+            <option value="7">鏈€杩?澶?/option>
+            <option value="14">鏈€杩?4澶?/option>
+            <option value="30" selected>鏈€杩?0澶?/option>
+            <option value="all">鍏ㄩ儴鏃堕棿</option>
+            <option value="custom">鑷畾涔夎寖鍥?/option>
         </select>
         <input type="date" id="startDate" style="display:none" onchange="changeRange()">
         <span id="toText" style="display:none">~</span>
         <input type="date" id="endDate" style="display:none" onchange="changeRange()">
-        <button onclick="resetFilters()">重置筛选</button>
+        <button onclick="resetFilters()">閲嶇疆绛涢€?/button>
     </div>
     
     <div class="stats" id="statsCards"></div>
@@ -81,24 +81,24 @@
     <div class="charts-row">
         <div class="chart-container">
             <div class="chart-title">
-                <span>[CHART] 每日总订单趋势</span>
+                <span>[CHART] 姣忔棩鎬昏鍗曡秼鍔?/span>
                 <select id="trendRange" onchange="changeRange()">
-                    <option value="7">7天</option>
-                    <option value="14">14天</option>
-                    <option value="30" selected>30天</option>
-                    <option value="all">全部</option>
+                    <option value="7">7澶?/option>
+                    <option value="14">14澶?/option>
+                    <option value="30" selected>30澶?/option>
+                    <option value="all">鍏ㄩ儴</option>
                 </select>
             </div>
             <canvas id="dailyTrendChart"></canvas>
         </div>
         <div class="chart-container">
             <div class="chart-title">
-                <span>[TOP] Top 10 账号对比</span>
+                <span>[TOP] Top 10 璐﹀彿瀵规瘮</span>
                 <select id="topRange" onchange="changeRange()">
-                    <option value="7">7天</option>
-                    <option value="14">14天</option>
-                    <option value="30" selected>30天</option>
-                    <option value="all">全部</option>
+                    <option value="7">7澶?/option>
+                    <option value="14">14澶?/option>
+                    <option value="30" selected>30澶?/option>
+                    <option value="all">鍏ㄩ儴</option>
                 </select>
             </div>
             <canvas id="top10Chart"></canvas>
@@ -106,21 +106,21 @@
     </div>
     
     <div class="table-container">
-        <div class="table-title">[TABLE] 账号数据明细</div>
+        <div class="table-title">[TABLE] 璐﹀彿鏁版嵁鏄庣粏</div>
         <div class="table-filter-bar">
-            <input type="text" id="searchInput" placeholder="Search 账号名称..." oninput="filterTable()">
+            <input type="text" id="searchInput" placeholder="Search 璐﹀彿鍚嶇О..." oninput="filterTable()">
             <select id="operatorFilter" onchange="filterTable()">
-                <option value="">全部运营人</option>
+                <option value="">鍏ㄩ儴杩愯惀浜?/option>
             </select>
             <select id="typeFilter" onchange="filterTable()">
-                <option value="">全部账号类型</option>
+                <option value="">鍏ㄩ儴璐﹀彿绫诲瀷</option>
             </select>
             <select id="sortSelect" onchange="filterTable()">
-                <option value="totalOrders-desc">按总订单 DESC</option>
-                <option value="totalOrders-asc">按总订单 ASC</option>
-                <option value="totalIncome-desc">按总收入 DESC</option>
-                <option value="totalIncome-asc">按总收入 ASC</option>
-                <option value="account-asc">按账号名 A-Z</option>
+                <option value="totalOrders-desc">鎸夋€昏鍗?DESC</option>
+                <option value="totalOrders-asc">鎸夋€昏鍗?ASC</option>
+                <option value="totalIncome-desc">鎸夋€绘敹鍏?DESC</option>
+                <option value="totalIncome-asc">鎸夋€绘敹鍏?ASC</option>
+                <option value="account-asc">鎸夎处鍙峰悕 A-Z</option>
             </select>
         </div>
         <table id="dataTable">
@@ -132,19 +132,19 @@
     
     <div class="chart-container heatmap-section">
         <div class="chart-title">
-            <span>[HEAT] 各账号每日订单热力图（Top 15）</span>
+            <span>[HEAT] 鍚勮处鍙锋瘡鏃ヨ鍗曠儹鍔涘浘锛圱op 15锛?/span>
             <select id="heatmapRange" onchange="changeRange()">
-                <option value="7">7天</option>
-                <option value="14">14天</option>
-                <option value="30" selected>30天</option>
-                <option value="all">全部</option>
+                <option value="7">7澶?/option>
+                <option value="14">14澶?/option>
+                <option value="30" selected>30澶?/option>
+                <option value="all">鍏ㄩ儴</option>
             </select>
         </div>
         <canvas id="heatmapChart" height="400"></canvas>
     </div>
     
     <div class="footer">
-        <p>[FOOTER] 抖音账号运营仪表盘 | 数据来源：精选联盟订单数据</p>
+        <p>[FOOTER] 鎶栭煶璐﹀彿杩愯惀浠〃鐩?| 鏁版嵁鏉ユ簮锛氱簿閫夎仈鐩熻鍗曟暟鎹?/p>
     </div>
     
     <script>
@@ -251,9 +251,9 @@
         const top = filteredAccounts.sort((a, b) => (b.totalOrders || 0) - (a.totalOrders || 0))[0];
         
         document.getElementById('statsCards').innerHTML = 
-            '<div class="stat-card"><div class="label">[BOX] 总订单</div><div class="value">' + totalOrders.toLocaleString() + '</div><div class="sub">全部账号合计</div></div>' +
-            '<div class="stat-card"><div class="label">[MNY] 总收入</div><div class="value">$' + Math.round(totalIncome).toLocaleString() + '</div><div class="sub">预估收入</div></div>' +
-            '<div class="stat-card"><div class="label">[AVG] 日均单量</div><div class="value">' + avgDaily.toFixed(1) + '</div><div class="sub">每账号每日</div></div>' +
+            '<div class="stat-card"><div class="label">[BOX] 鎬昏鍗?/div><div class="value">' + totalOrders.toLocaleString() + '</div><div class="sub">鍏ㄩ儴璐﹀彿鍚堣</div></div>' +
+            '<div class="stat-card"><div class="label">[MNY] 鎬绘敹鍏?/div><div class="value">$' + Math.round(totalIncome).toLocaleString() + '</div><div class="sub">棰勪及鏀跺叆</div></div>' +
+            '<div class="stat-card"><div class="label">[AVG] 鏃ュ潎鍗曢噺</div><div class="value">' + avgDaily.toFixed(1) + '</div><div class="sub">姣忚处鍙锋瘡鏃?/div></div>' +
             '<div class="stat-card"><div class="label">[TOP] TOP 1</div><div class="value" style="font-size:20px">' + (top ? (top.totalOrders || 0).toLocaleString() : 0) + '</div><div class="sub">' + (top ? top.account : '-') + '</div></div>';
     }
     
@@ -281,7 +281,7 @@
             data: {
                 labels: trendDates.map(d => d.slice(5).replace('-', '/')),
                 datasets: [{ 
-                    label: '每日订单', 
+                    label: '姣忔棩璁㈠崟', 
                     data: trendDates.map(d => dailyTotals[d] || 0), 
                     borderColor: '#667eea', 
                     backgroundColor: 'rgba(102,126,234,0.1)', 
@@ -300,7 +300,7 @@
             type: 'bar',
             data: {
                 labels: top10.map(a => (a.account || '').substring(0, 8)),
-                datasets: [{ label: '总订单', data: top10.map(a => a.totalOrders || 0), backgroundColor: colors10 }]
+                datasets: [{ label: '鎬昏鍗?, data: top10.map(a => a.totalOrders || 0), backgroundColor: colors10 }]
             },
             options: { indexAxis: 'y', responsive: true }
         });
@@ -339,7 +339,7 @@
     
     function renderTable() {
         const dateHeaders = filteredDates.map(d => '<th>' + d.slice(5).replace('-', '/') + '</th>').join('');
-        document.getElementById('tableHead').innerHTML = '<tr><th>#</th><th>账号名称</th><th>运营人</th><th>类型</th><th>总订单</th><th>总收入</th><th>日均</th><th>趋势</th>' + dateHeaders + '</tr>';
+        document.getElementById('tableHead').innerHTML = '<tr><th>#</th><th>璐﹀彿鍚嶇О</th><th>杩愯惀浜?/th><th>绫诲瀷</th><th>鎬昏鍗?/th><th>鎬绘敹鍏?/th><th>鏃ュ潎</th><th>瓒嬪娍</th>' + dateHeaders + '</tr>';
         renderTableRows(filteredAccounts);
     }
     
@@ -351,7 +351,7 @@
             return '<tr><td>' + (i + 1) + '</td><td class="account-name" title="' + a.account + '">' + a.account + '</td><td>' + (a.operator || '-') + '</td><td>' + (a.accountType || '-') + '</td><td class="total-orders">' + (a.totalOrders || 0).toLocaleString() + '</td><td>$' + Math.round(a.totalIncome || 0).toLocaleString() + '</td><td>' + (a.avgDaily || 0).toFixed(1) + '</td><td class="trend-cell" title="' + trendStr + '">' + trendStr + '</td>' + cells + '</tr>';
         }).join('');
         const totalOrders = accounts.reduce((s, a) => s + (a.totalOrders || 0), 0);
-        document.getElementById('tableFooter').textContent = '共 ' + accounts.length + ' 个账号 | ' + totalOrders.toLocaleString() + ' 笔订单';
+        document.getElementById('tableFooter').textContent = '鍏?' + accounts.length + ' 涓处鍙?| ' + totalOrders.toLocaleString() + ' 绗旇鍗?;
     }
     
     function filterTable() {
