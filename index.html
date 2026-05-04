@@ -11,27 +11,24 @@
         .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px 30px; border-radius: 12px; margin-bottom: 25px; }
         .header h1 { font-size: 24px; margin-bottom: 5px; }
         .header p { opacity: 0.9; font-size: 14px; }
-        
         .filter-bar-top { background: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-        .filter-bar-top label { font-size: 13px; color: #666; }
+        .filter-bar-top label { font-size: 13px; color: #666; font-weight: 500; }
         .filter-bar-top select, .filter-bar-top input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
-        .filter-bar-top select { min-width: 150px; }
+        .filter-bar-top select { min-width: 120px; }
+        .filter-bar-top input[type="date"] { min-width: 130px; }
         .filter-bar-top button { padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; }
         .filter-bar-top button:hover { background: #5a6fd6; }
-        
+        .date-range-inputs { display: flex; gap: 10px; align-items: center; }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
         .stat-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .stat-card .label { color: #666; font-size: 13px; margin-bottom: 8px; }
         .stat-card .value { font-size: 28px; font-weight: bold; color: #333; }
         .stat-card .sub { font-size: 12px; color: #999; margin-top: 5px; }
-        
         .chart-container { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 25px; }
         .chart-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .chart-title select { padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
-        
+        .chart-title select { padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
         .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
         @media (max-width: 900px) { .charts-row { grid-template-columns: 1fr; } }
-        
         .table-container { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 25px; }
         .table-title { font-size: 16px; font-weight: 600; color: #333; margin-bottom: 15px; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -44,11 +41,9 @@
         .orders.low { color: #dc3545; }
         .orders.medium { color: #ffc107; }
         .total-orders { font-weight: bold; color: #667eea; }
-        
         .table-filter-bar { margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
         .table-filter-bar input, .table-filter-bar select { padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
         .table-filter-bar input { width: 200px; }
-        
         .footer { text-align: center; padding: 20px; color: #999; font-size: 12px; }
         .update-info { font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 5px; }
         .heatmap-section { margin-top: 20px; }
@@ -68,11 +63,13 @@
             <option value="14">Last 14 Days</option>
             <option value="30">Last 30 Days</option>
             <option value="all">All Time</option>
-            <option value="custom">Custom</option>
+            <option value="custom">Custom Range</option>
         </select>
-        <input type="date" id="startDate" style="display:none" onchange="changeRange()">
-        <span id="toText" style="display:none"> - </span>
-        <input type="date" id="endDate" style="display:none" onchange="changeRange()">
+        <div class="date-range-inputs" id="customRangeInputs" style="display:none;">
+            <input type="date" id="startDate" onchange="changeRange()">
+            <span>~</span>
+            <input type="date" id="endDate" onchange="changeRange()">
+        </div>
         <button onclick="resetFilters()">Reset</button>
     </div>
     
@@ -180,9 +177,7 @@
     function changeRange() {
         const rangeVal = document.getElementById('rangeSelect').value;
         const isCustom = rangeVal === 'custom';
-        document.getElementById('startDate').style.display = isCustom ? 'inline-block' : 'none';
-        document.getElementById('endDate').style.display = isCustom ? 'inline-block' : 'none';
-        document.getElementById('toText').style.display = isCustom ? 'inline' : 'none';
+        document.getElementById('customRangeInputs').style.display = isCustom ? 'flex' : 'none';
         
         let startDate = document.getElementById('startDate').value;
         let endDate = document.getElementById('endDate').value;
@@ -217,10 +212,10 @@
             }
             return {
                 ...a,
-                totalOrders: totalOrders,
+                totalOrders,
                 totalIncome: Math.round(totalIncome * 100) / 100,
                 avgDaily: totalOrders / Math.max(filteredDates.length, 1),
-                daily: daily
+                daily
             };
         });
     }
@@ -246,7 +241,6 @@
         const heatmapRange = document.getElementById('heatmapRange').value;
         
         const trendDates = getDatesForRange(trendRange);
-        const topDates = getDatesForRange(topRange);
         const heatmapDates = getDatesForRange(heatmapRange);
         
         const dailyTotals = {};
@@ -259,7 +253,7 @@
             type: 'line',
             data: {
                 labels: trendDates.map(d => d.slice(5).replace('-', '/')),
-                datasets: [{ label: 'Daily Orders', data: trendDates.map(d => dailyTotals[d] || 0), borderColor: '#667eea', backgroundColor: 'rgba(102,126,234,0.1)', fill: true, tension: 0.4, pointRadius: 4 }]
+                datasets: [{ label: 'Orders', data: trendDates.map(d => dailyTotals[d] || 0), borderColor: '#667eea', backgroundColor: 'rgba(102,126,234,0.1)', fill: true, tension: 0.4, pointRadius: 4 }]
             },
             options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
         });
@@ -317,7 +311,7 @@
             return '<tr><td>' + (i + 1) + '</td><td class="account-name" title="' + a.account + '">' + a.account + '</td><td>' + (a.operator || '-') + '</td><td>' + (a.accountType || '-') + '</td><td class="total-orders">' + (a.totalOrders || 0).toLocaleString() + '</td><td>$' + Math.round(a.totalIncome || 0).toLocaleString() + '</td><td>' + (a.avgDaily || 0).toFixed(1) + '</td><td class="trend-cell" title="' + trendStr + '">' + trendStr + '</td>' + cells + '</tr>';
         }).join('');
         const totalOrders = accounts.reduce((s, a) => s + (a.totalOrders || 0), 0);
-        document.getElementById('tableFooter').textContent = 'Total ' + accounts.length + ' accounts | ' + totalOrders.toLocaleString() + ' orders';
+        document.getElementById('tableFooter').textContent = accounts.length + ' accounts | ' + totalOrders.toLocaleString() + ' orders';
     }
     
     function filterTable() {
