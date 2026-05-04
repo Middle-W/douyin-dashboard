@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鎶栭煶璐﹀彿杩愯惀浠〃鐩?/title>
+    <title>Douyin Account Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -56,24 +56,24 @@
 </head>
 <body>
     <div class="header">
-        <h1>[DATA] 鎶栭煶璐﹀彿杩愯惀浠〃鐩?/h1>
-        <p id="subtitle">缁熻鍛ㄦ湡锛?span id="dateRange">-</span> | 鍏?<span id="accountCount">-</span> 涓处鍙?/p>
-        <p class="update-info">鏁版嵁鏇存柊鏃堕棿锛?span id="updateTime">-</span></p>
+        <h1>Douyin Account Dashboard</h1>
+        <p id="subtitle">Period: <span id="dateRange">-</span> | <span id="accountCount">-</span> Accounts</p>
+        <p class="update-info">Updated: <span id="updateTime">-</span></p>
     </div>
     
     <div class="filter-bar-top">
-        <label>鏃堕棿鑼冨洿锛?/label>
+        <label>Date Range:</label>
         <select id="rangeSelect" onchange="changeRange()">
-            <option value="7">鏈€杩?澶?/option>
-            <option value="14">鏈€杩?4澶?/option>
-            <option value="30" selected>鏈€杩?0澶?/option>
-            <option value="all">鍏ㄩ儴鏃堕棿</option>
-            <option value="custom">鑷畾涔夎寖鍥?/option>
+            <option value="7" selected>Last 7 Days</option>
+            <option value="14">Last 14 Days</option>
+            <option value="30">Last 30 Days</option>
+            <option value="all">All Time</option>
+            <option value="custom">Custom Range</option>
         </select>
         <input type="date" id="startDate" style="display:none" onchange="changeRange()">
-        <span id="toText" style="display:none">~</span>
+        <span id="toText" style="display:none"> - </span>
         <input type="date" id="endDate" style="display:none" onchange="changeRange()">
-        <button onclick="resetFilters()">閲嶇疆绛涢€?/button>
+        <button onclick="resetFilters()">Reset</button>
     </div>
     
     <div class="stats" id="statsCards"></div>
@@ -81,24 +81,24 @@
     <div class="charts-row">
         <div class="chart-container">
             <div class="chart-title">
-                <span>[CHART] 姣忔棩鎬昏鍗曡秼鍔?/span>
+                <span>Daily Orders Trend</span>
                 <select id="trendRange" onchange="changeRange()">
-                    <option value="7">7澶?/option>
-                    <option value="14">14澶?/option>
-                    <option value="30" selected>30澶?/option>
-                    <option value="all">鍏ㄩ儴</option>
+                    <option value="7" selected>7D</option>
+                    <option value="14">14D</option>
+                    <option value="30">30D</option>
+                    <option value="all">All</option>
                 </select>
             </div>
             <canvas id="dailyTrendChart"></canvas>
         </div>
         <div class="chart-container">
             <div class="chart-title">
-                <span>[TOP] Top 10 璐﹀彿瀵规瘮</span>
+                <span>Top 10 Accounts</span>
                 <select id="topRange" onchange="changeRange()">
-                    <option value="7">7澶?/option>
-                    <option value="14">14澶?/option>
-                    <option value="30" selected>30澶?/option>
-                    <option value="all">鍏ㄩ儴</option>
+                    <option value="7" selected>7D</option>
+                    <option value="14">14D</option>
+                    <option value="30">30D</option>
+                    <option value="all">All</option>
                 </select>
             </div>
             <canvas id="top10Chart"></canvas>
@@ -106,21 +106,21 @@
     </div>
     
     <div class="table-container">
-        <div class="table-title">[TABLE] 璐﹀彿鏁版嵁鏄庣粏</div>
+        <div class="table-title">Account Details</div>
         <div class="table-filter-bar">
-            <input type="text" id="searchInput" placeholder="Search 璐﹀彿鍚嶇О..." oninput="filterTable()">
+            <input type="text" id="searchInput" placeholder="Search account..." oninput="filterTable()">
             <select id="operatorFilter" onchange="filterTable()">
-                <option value="">鍏ㄩ儴杩愯惀浜?/option>
+                <option value="">All Operators</option>
             </select>
             <select id="typeFilter" onchange="filterTable()">
-                <option value="">鍏ㄩ儴璐﹀彿绫诲瀷</option>
+                <option value="">All Types</option>
             </select>
             <select id="sortSelect" onchange="filterTable()">
-                <option value="totalOrders-desc">鎸夋€昏鍗?DESC</option>
-                <option value="totalOrders-asc">鎸夋€昏鍗?ASC</option>
-                <option value="totalIncome-desc">鎸夋€绘敹鍏?DESC</option>
-                <option value="totalIncome-asc">鎸夋€绘敹鍏?ASC</option>
-                <option value="account-asc">鎸夎处鍙峰悕 A-Z</option>
+                <option value="totalOrders-desc">Orders DESC</option>
+                <option value="totalOrders-asc">Orders ASC</option>
+                <option value="totalIncome-desc">Income DESC</option>
+                <option value="totalIncome-asc">Income ASC</option>
+                <option value="account-asc">Name A-Z</option>
             </select>
         </div>
         <table id="dataTable">
@@ -132,19 +132,19 @@
     
     <div class="chart-container heatmap-section">
         <div class="chart-title">
-            <span>[HEAT] 鍚勮处鍙锋瘡鏃ヨ鍗曠儹鍔涘浘锛圱op 15锛?/span>
+            <span>Daily Orders Heatmap (Top 15)</span>
             <select id="heatmapRange" onchange="changeRange()">
-                <option value="7">7澶?/option>
-                <option value="14">14澶?/option>
-                <option value="30" selected>30澶?/option>
-                <option value="all">鍏ㄩ儴</option>
+                <option value="7" selected>7D</option>
+                <option value="14">14D</option>
+                <option value="30">30D</option>
+                <option value="all">All</option>
             </select>
         </div>
         <canvas id="heatmapChart" height="400"></canvas>
     </div>
     
     <div class="footer">
-        <p>[FOOTER] 鎶栭煶璐﹀彿杩愯惀浠〃鐩?| 鏁版嵁鏉ユ簮锛氱簿閫夎仈鐩熻鍗曟暟鎹?/p>
+        <p>Douyin Account Dashboard | Data: JXLM Orders</p>
     </div>
     
     <script>
@@ -157,13 +157,10 @@
     function getDatesForRange(rangeVal, customStart, customEnd) {
         const allDates = dashboardData.dates || [];
         if (!allDates.length) return [];
-        
         if (rangeVal === 'all') return allDates;
-        
         if (rangeVal === 'custom' && customStart && customEnd) {
             return allDates.filter(d => d >= customStart && d <= customEnd);
         }
-        
         const days = parseInt(rangeVal);
         return allDates.slice(-days);
     }
@@ -171,47 +168,36 @@
     function init() {
         document.getElementById('accountCount').textContent = dashboardData.totalAccounts || dashboardData.accounts.length;
         document.getElementById('updateTime').textContent = dashboardData.generatedAt || '-';
-        
-        // Setup date inputs
         const allDates = dashboardData.dates || [];
         if (allDates.length > 0) {
             document.getElementById('startDate').value = allDates[0];
             document.getElementById('endDate').value = allDates[allDates.length - 1];
         }
-        
         changeRange();
         populateFilters();
     }
     
     function changeRange() {
         const rangeVal = document.getElementById('rangeSelect').value;
-        
-        // Show/hide custom date inputs
         const isCustom = rangeVal === 'custom';
         document.getElementById('startDate').style.display = isCustom ? 'inline-block' : 'none';
         document.getElementById('endDate').style.display = isCustom ? 'inline-block' : 'none';
         document.getElementById('toText').style.display = isCustom ? 'inline' : 'none';
         
-        // Get selected date range
         let startDate = document.getElementById('startDate').value;
         let endDate = document.getElementById('endDate').value;
         filteredDates = getDatesForRange(rangeVal, startDate, endDate);
         
-        // Update date range display
         if (filteredDates.length > 0) {
             document.getElementById('dateRange').textContent = filteredDates[0] + ' ~ ' + filteredDates[filteredDates.length - 1];
         }
         
-        // Sync other selectors
-        const mainRange = rangeVal === 'custom' ? '30' : rangeVal;
+        const mainRange = rangeVal === 'custom' ? '7' : rangeVal;
         document.getElementById('trendRange').value = mainRange;
         document.getElementById('topRange').value = mainRange;
         document.getElementById('heatmapRange').value = mainRange;
         
-        // Filter accounts based on date range
         filterAccounts();
-        
-        // Re-render
         renderStats();
         renderCharts();
         filterTable();
@@ -219,25 +205,20 @@
     
     function filterAccounts() {
         filteredAccounts = dashboardData.accounts.map(a => {
-            let totalOrders = 0, totalIncome = 0, totalAmount = 0;
+            let totalOrders = 0, totalIncome = 0;
             const daily = {};
-            
             filteredDates.forEach(d => {
                 const val = a.daily ? (a.daily[d] || 0) : 0;
                 daily[d] = val;
                 totalOrders += val;
             });
-            
-            // Estimate income proportionally
             if (a.totalOrders > 0) {
                 totalIncome = (a.totalIncome || 0) * (totalOrders / a.totalOrders);
             }
-            
             return {
                 ...a,
                 totalOrders: totalOrders,
                 totalIncome: Math.round(totalIncome * 100) / 100,
-                totalAmount: (a.totalAmount || 0) * (totalOrders / (a.totalOrders || 1)),
                 avgDaily: totalOrders / Math.max(filteredDates.length, 1),
                 daily: daily
             };
@@ -251,14 +232,13 @@
         const top = filteredAccounts.sort((a, b) => (b.totalOrders || 0) - (a.totalOrders || 0))[0];
         
         document.getElementById('statsCards').innerHTML = 
-            '<div class="stat-card"><div class="label">[BOX] 鎬昏鍗?/div><div class="value">' + totalOrders.toLocaleString() + '</div><div class="sub">鍏ㄩ儴璐﹀彿鍚堣</div></div>' +
-            '<div class="stat-card"><div class="label">[MNY] 鎬绘敹鍏?/div><div class="value">$' + Math.round(totalIncome).toLocaleString() + '</div><div class="sub">棰勪及鏀跺叆</div></div>' +
-            '<div class="stat-card"><div class="label">[AVG] 鏃ュ潎鍗曢噺</div><div class="value">' + avgDaily.toFixed(1) + '</div><div class="sub">姣忚处鍙锋瘡鏃?/div></div>' +
-            '<div class="stat-card"><div class="label">[TOP] TOP 1</div><div class="value" style="font-size:20px">' + (top ? (top.totalOrders || 0).toLocaleString() : 0) + '</div><div class="sub">' + (top ? top.account : '-') + '</div></div>';
+            '<div class="stat-card"><div class="label">Total Orders</div><div class="value">' + totalOrders.toLocaleString() + '</div><div class="sub">All Accounts</div></div>' +
+            '<div class="stat-card"><div class="label">Total Income</div><div class="value">$' + Math.round(totalIncome).toLocaleString() + '</div><div class="sub">Est. Revenue</div></div>' +
+            '<div class="stat-card"><div class="label">Daily Avg</div><div class="value">' + avgDaily.toFixed(1) + '</div><div class="sub">Per Account</div></div>' +
+            '<div class="stat-card"><div class="label">TOP 1</div><div class="value" style="font-size:20px">' + (top ? (top.totalOrders || 0).toLocaleString() : 0) + '</div><div class="sub">' + (top ? top.account : '-') + '</div></div>';
     }
     
     function renderCharts() {
-        // Destroy existing charts
         Object.values(charts).forEach(c => c.destroy());
         
         const trendRange = document.getElementById('trendRange').value;
@@ -269,7 +249,6 @@
         const topDates = getDatesForRange(topRange);
         const heatmapDates = getDatesForRange(heatmapRange);
         
-        // Trend chart
         const dailyTotals = {};
         trendDates.forEach(d => dailyTotals[d] = 0);
         filteredAccounts.forEach(a => {
@@ -280,32 +259,19 @@
             type: 'line',
             data: {
                 labels: trendDates.map(d => d.slice(5).replace('-', '/')),
-                datasets: [{ 
-                    label: '姣忔棩璁㈠崟', 
-                    data: trendDates.map(d => dailyTotals[d] || 0), 
-                    borderColor: '#667eea', 
-                    backgroundColor: 'rgba(102,126,234,0.1)', 
-                    fill: true, 
-                    tension: 0.4,
-                    pointRadius: 4
-                }]
+                datasets: [{ label: 'Daily Orders', data: trendDates.map(d => dailyTotals[d] || 0), borderColor: '#667eea', backgroundColor: 'rgba(102,126,234,0.1)', fill: true, tension: 0.4, pointRadius: 4 }]
             },
             options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
         });
         
-        // Top 10 chart
         const top10 = [...filteredAccounts].sort((a, b) => (b.totalOrders || 0) - (a.totalOrders || 0)).slice(0, 10);
         const colors10 = ['#667eea','#764ba2','#f093fb','#f5576c','#4facfe','#00f2fe','#43e97b','#38f9d7','#ff9a9e','#a18cd1'];
         charts.top10 = new Chart(document.getElementById('top10Chart'), {
             type: 'bar',
-            data: {
-                labels: top10.map(a => (a.account || '').substring(0, 8)),
-                datasets: [{ label: '鎬昏鍗?, data: top10.map(a => a.totalOrders || 0), backgroundColor: colors10 }]
-            },
+            data: { labels: top10.map(a => (a.account || '').substring(0, 8)), datasets: [{ label: 'Orders', data: top10.map(a => a.totalOrders || 0), backgroundColor: colors10 }] },
             options: { indexAxis: 'y', responsive: true }
         });
         
-        // Heatmap (at bottom)
         const colors = ['#667eea','#764ba2','#f093fb','#f5576c','#4facfe','#00f2fe','#43e97b','#38f9d7','#ff9a9e','#a18cd1','#667eea','#764ba2','#f093fb','#f5576c','#4facfe'];
         const top15 = [...filteredAccounts].sort((a, b) => (b.totalOrders || 0) - (a.totalOrders || 0)).slice(0, 15);
         charts.heatmap = new Chart(document.getElementById('heatmapChart'), {
@@ -339,7 +305,7 @@
     
     function renderTable() {
         const dateHeaders = filteredDates.map(d => '<th>' + d.slice(5).replace('-', '/') + '</th>').join('');
-        document.getElementById('tableHead').innerHTML = '<tr><th>#</th><th>璐﹀彿鍚嶇О</th><th>杩愯惀浜?/th><th>绫诲瀷</th><th>鎬昏鍗?/th><th>鎬绘敹鍏?/th><th>鏃ュ潎</th><th>瓒嬪娍</th>' + dateHeaders + '</tr>';
+        document.getElementById('tableHead').innerHTML = '<tr><th>#</th><th>Account</th><th>Operator</th><th>Type</th><th>Orders</th><th>Income</th><th>Avg</th><th>Trend</th>' + dateHeaders + '</tr>';
         renderTableRows(filteredAccounts);
     }
     
@@ -351,7 +317,7 @@
             return '<tr><td>' + (i + 1) + '</td><td class="account-name" title="' + a.account + '">' + a.account + '</td><td>' + (a.operator || '-') + '</td><td>' + (a.accountType || '-') + '</td><td class="total-orders">' + (a.totalOrders || 0).toLocaleString() + '</td><td>$' + Math.round(a.totalIncome || 0).toLocaleString() + '</td><td>' + (a.avgDaily || 0).toFixed(1) + '</td><td class="trend-cell" title="' + trendStr + '">' + trendStr + '</td>' + cells + '</tr>';
         }).join('');
         const totalOrders = accounts.reduce((s, a) => s + (a.totalOrders || 0), 0);
-        document.getElementById('tableFooter').textContent = '鍏?' + accounts.length + ' 涓处鍙?| ' + totalOrders.toLocaleString() + ' 绗旇鍗?;
+        document.getElementById('tableFooter').textContent = 'Total ' + accounts.length + ' accounts | ' + totalOrders.toLocaleString() + ' orders';
     }
     
     function filterTable() {
@@ -361,13 +327,9 @@
         const [field, dir] = document.getElementById('sortSelect').value.split('-');
         
         let filtered = filteredAccounts.filter(a => {
-            const matchSearch = !search || (a.account || '').toLowerCase().includes(search);
-            const matchOp = !operator || a.operator === operator;
-            const matchType = !type || a.accountType === type;
-            return matchSearch && matchOp && matchType;
+            return (!search || (a.account || '').toLowerCase().includes(search)) && (!operator || a.operator === operator) && (!type || a.accountType === type);
         });
         
-        // Sort
         if (field) {
             filtered.sort((a, b) => {
                 let va, vb;
@@ -377,7 +339,6 @@
                 return dir === 'desc' ? vb - va : va - vb;
             });
         }
-        
         renderTableRows(filtered);
     }
     
