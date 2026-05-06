@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
       if (h === '付款金额') idx.amount = i;
       if (h === '运营人') idx.operator = i;
       if (h === '订单类型') idx.type = i;
+      if (h === '订单状态') idx.status = i;
     });
 
     if (idx.account === undefined || idx.time === undefined) {
@@ -38,12 +39,21 @@ export async function POST(request: NextRequest) {
     // Aggregate data
     const accounts: Record<string, any> = {};
     const allDates = new Set<string>();
+    let skippedRefund = 0;
 
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
       const accountRaw = row[idx.account];
       const payTime = row[idx.time];
+      const orderStatus = row[idx.status];
+      
       if (!accountRaw || !payTime) continue;
+      
+      // Skip refund/return orders
+      if (orderStatus && String(orderStatus).includes('退款')) {
+        skippedRefund++;
+        continue;
+      }
 
       const accountName = String(accountRaw).split('(')[0].trim();
       const date = String(payTime).slice(0, 10);
@@ -57,12 +67,15 @@ export async function POST(request: NextRequest) {
           account_type: row[idx.type] || '小店',
           daily: {},
           totalIncome: 0,
-          totalAmount: 0
+          totalAmount: 0,
+          totalNetIncome: 0
         };
       }
       accounts[accountName].daily[date] = (accounts[accountName].daily[date] || 0) + 1;
       accounts[accountName].totalIncome += income;
       accounts[accountName].totalAmount += amount;
+      // Net income = estimated income * 0.9 (deduct 10% platform fee)
+      accounts[accountName].totalNetIncome += income * 0.9;
       allDates.add(date);
     }
 
@@ -92,12 +105,12 @@ export async function POST(request: NextRequest) {
           date,
           orders,
           income: Math.round(acc.totalIncome * 100) / 100,
-          amount: Math.round(acc.totalAmount * 100) / 100
+          amount: Math.round(acc.totalAmount * 100) / 100,
+          net_income: Math.round(acc.totalNetIncome * 100) / 100
         });
       }
     }
 
-    // Batch insert
     const { error: statsError } = await supabaseAdmin
       .from('daily_stats')
       .upsert(stats, { onConflict: 'account_name,date' });
@@ -120,7 +133,8 @@ export async function POST(request: NextRequest) {
       accounts: accountList.length,
       dates: sortedDates.length,
       dateFrom,
-      dateTo
+      dateTo,
+      skippedRefund
     });
 
   } catch (err: any) {

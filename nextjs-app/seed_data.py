@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import openpyxl, requests, json, os
+import openpyxl, requests
 from collections import defaultdict
 
 URL = 'https://nlhhktqhupqnxnjxwqzd.supabase.co'
@@ -12,39 +12,26 @@ headers = {
     'Prefer': 'resolution=merge-duplicates'
 }
 
-def upsert_accounts(accounts):
-    """Insert/update accounts"""
-    payload = [{'name': name, 'operator': data.get('operator',''), 'account_type': data.get('type','混剪'), 'buyer': data.get('buyer',''), 'status': data.get('status','')} for name, data in accounts.items()]
-    res = requests.post(f'{URL}/rest/v1/accounts', headers={**headers, 'Prefer': 'resolution=merge-duplicates,return=minimal'}, json=payload)
-    print('Accounts upsert:', res.status_code)
-    if res.status_code not in [200, 201]:
-        print(res.text[:200])
-
-def insert_daily_stats(stats):
-    """Insert daily stats"""
-    # Batch in chunks of 1000
-    chunk_size = 1000
-    for i in range(0, len(stats), chunk_size):
-        chunk = stats[i:i+chunk_size]
-        res = requests.post(f'{URL}/rest/v1/daily_stats', headers={**headers, 'Prefer': 'resolution=merge-duplicates,return=minimal'}, json=chunk)
-        print(f'Daily stats batch {i//chunk_size + 1}:', res.status_code)
-        if res.status_code not in [200, 201]:
-            print(res.text[:200])
-
 def main():
-    print('Reading Excel files...')
-    
-    # 1. Read orders Excel
+    print('Reading order Excel...')
     wb = openpyxl.load_workbook('../jingxuan_orders_2026050602293354.xlsx')
     ws = wb.active
     
-    accounts = defaultdict(lambda: {'operator': '', 'type': '小店', 'daily': defaultdict(int), 'totalIncome': 0, 'totalAmount': 0})
+    accounts = defaultdict(lambda: {'operator': '', 'type': '小店', 'daily': defaultdict(int), 'totalIncome': 0, 'totalAmount': 0, 'totalNetIncome': 0})
+    skipped_refund = 0
     
     for row in ws.iter_rows(min_row=2, values_only=True):
         account_raw = row[11]
         pay_time = row[3]
         operator = row[15] or ''
         account_type = row[16] or ''
+        order_status = row[6] or ''
+        
+        # Skip refunds
+        if order_status and '退款' in str(order_status):
+            skipped_refund += 1
+            continue
+        
         try:
             income = float(row[10] or 0)
         except:
@@ -65,8 +52,9 @@ def main():
         accounts[account]['daily'][date] += 1
         accounts[account]['totalIncome'] += income
         accounts[account]['totalAmount'] += amount
+        accounts[account]['totalNetIncome'] += income * 0.9
     
-    # 2. Read meta Excel
+    # Read meta
     try:
         wb_meta = openpyxl.load_workbook('../抖音账号基础信息.xlsx')
         for row in wb_meta.active.iter_rows(min_row=2, values_only=True):
@@ -78,33 +66,80 @@ def main():
     except Exception as e:
         print('Meta read error:', e)
     
-    print(f'Found {len(accounts)} accounts')
+    print(f'Found {len(accounts)} accounts, skipped {skipped_refund} refunds')
     
-    # 3. Prepare data
-    account_payload = {}
-    stats_payload = []
+    # Clear old data first
+    print('Clearing old data...')
+    requests.delete(f'{URL}/rest/v1/daily_stats', headers={**headers, 'Prefer': 'count=exact'}, params={'id': 'gt.0'})
     
+    # Insert accounts
+    account_payload = []
     for acc, data in accounts.items():
-        account_payload[acc] = {
+        account_payload.append({
+            'name': acc,
             'operator': data['operator'],
-            'type': data['type'],
+            'account_type': data['type'],
             'buyer': data.get('buyer', ''),
             'status': data.get('status', '')
-        }
+        })
+    
+    print('Inserting accounts...')
+    for chunk in [account_payload[i:i+500] for i in range(0, len(account_payload), 500)]:
+        res = requests.post(f'{URL}/rest/v1/accounts', headers={**headers, 'Prefer': 'resolution=merge-duplicates,return=minimal'}, json=chunk)
+        print('Accounts batch:', res.status_code)
+    
+    # Insert stats
+    stats = []
+    for acc, data in accounts.items():
         for date, orders in data['daily'].items():
-            stats_payload.append({
+            stats.append({
                 'account_name': acc,
                 'date': date,
                 'orders': orders,
                 'income': round(data['totalIncome'], 2),
-                'amount': round(data['totalAmount'], 2)
+                'amount': round(data['totalAmount'], 2),
+                'net_income': round(data['totalNetIncome'], 2)
             })
     
-    print(f'Inserting {len(account_payload)} accounts, {len(stats_payload)} daily records...')
+    print(f'Inserting {len(stats)} daily records...')
+    for chunk in [stats[i:i+1000] for i in range(0, len(stats), 1000)]:
+        res = requests.post(f'{URL}/rest/v1/daily_stats', headers={**headers, 'Prefer': 'resolution=merge-duplicates,return=minimal'}, json=chunk)
+        print('Stats batch:', res.status_code)
     
-    # 4. Insert to Supabase
-    upsert_accounts(account_payload)
-    insert_daily_stats(stats_payload)
+    # Insert costs
+    print('Reading cost Excel...')
+    try:
+        wb_cost = openpyxl.load_workbook('../消耗示例.xlsx')
+        ws_cost = wb_cost.active
+        cost_headers = [cell.value for cell in ws_cost[1]]
+        
+        from datetime import datetime, timedelta
+        date_cols = []
+        for i, h in enumerate(cost_headers[1:], 1):
+            if isinstance(h, int):
+                date = datetime(1899, 12, 30) + timedelta(days=h)
+                date_cols.append({'idx': i, 'date': date.strftime('%Y-%m-%d')})
+        
+        costs = []
+        for row in ws_cost.iter_rows(min_row=2, values_only=True):
+            account_name = str(row[0] or '').strip()
+            if not account_name:
+                continue
+            for dc in date_cols:
+                cost = float(row[dc['idx']] or 0)
+                if cost > 0:
+                    costs.append({
+                        'account_name': account_name,
+                        'date': dc['date'],
+                        'cost': round(cost, 2)
+                    })
+        
+        print(f'Inserting {len(costs)} cost records...')
+        for chunk in [costs[i:i+1000] for i in range(0, len(costs), 1000)]:
+            res = requests.post(f'{URL}/rest/v1/daily_costs', headers={**headers, 'Prefer': 'resolution=merge-duplicates,return=minimal'}, json=chunk)
+            print('Costs batch:', res.status_code)
+    except Exception as e:
+        print('Cost import error:', e)
     
     print('Done!')
 
