@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Chart from 'chart.js/auto';
 
 type Metric = 'orders' | 'netIncome' | 'cost' | 'profit';
@@ -38,8 +38,16 @@ export default function DashboardPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [datePreset, setDatePreset] = useState('近7天');
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedBuyers, setSelectedBuyers] = useState<string[]>([]);
+  // Dynamic filters: { dataKey: [selectedValues] }
+  const [dashFilters, setDashFilters] = useState<Record<string, string[]>>({});
+
+  // Filter field config (key = db field, dataKey = key in dashboard data)
+  const FILTER_FIELDS: { key: string; label: string; dataKey: string }[] = [
+    { key: 'account_type', label: '类型', dataKey: 'accountType' },
+    { key: 'buyer', label: '选品人', dataKey: 'metaBuyer' },
+    { key: 'status', label: '状态', dataKey: 'metaStatus' },
+    { key: 'operator', label: '运营', dataKey: 'operator' },
+  ];
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [pickerMonth, setPickerMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const datePickerRef = useRef<HTMLDivElement>(null);
@@ -156,11 +164,11 @@ export default function DashboardPage() {
   const displayAccounts = (() => {
     if (!data) return [];
     let result = allAccounts;
-    if (selectedTypes.length > 0) {
-      result = result.filter((a: any) => selectedTypes.includes(a.accountType));
-    }
-    if (selectedBuyers.length > 0) {
-      result = result.filter((a: any) => selectedBuyers.includes(a.metaBuyer));
+    for (const { dataKey } of FILTER_FIELDS) {
+      const selected = dashFilters[dataKey] || [];
+      if (selected.length > 0) {
+        result = result.filter((a: any) => selected.includes(a[dataKey]));
+      }
     }
     return result.map((a: any) => {
       const m = getRangeMetrics(a, displayDates);
@@ -175,18 +183,6 @@ export default function DashboardPage() {
     });
   })();
 
-  const typeOptions = (() => {
-    const types = new Set<string>();
-    allAccounts.forEach((a: any) => { if (a.accountType) types.add(a.accountType); });
-    return Array.from(types).sort();
-  })();
-
-  const buyerOptions = (() => {
-    const buyers = new Set<string>();
-    allAccounts.forEach((a: any) => { if (a.metaBuyer) buyers.add(a.metaBuyer); });
-    return Array.from(buyers).sort();
-  })();
-
   // Active filter tags
   const activeFilters = (() => {
     const tags: { key: string; label: string; onRemove: () => void }[] = [];
@@ -195,8 +191,10 @@ export default function DashboardPage() {
     } else if (datePreset === '自定义' && dateFrom && dateTo) {
       tags.push({ key: 'date', label: `📅 ${dateFrom} ~ ${dateTo}`, onRemove: () => { setDateFrom(''); setDateTo(''); setDatePreset('近7天'); } });
     }
-    selectedTypes.forEach(t => tags.push({ key: `type-${t}`, label: `🏷️ ${t}`, onRemove: () => setSelectedTypes(prev => prev.filter(x => x !== t)) }));
-    selectedBuyers.forEach(b => tags.push({ key: `buyer-${b}`, label: `👤 ${b}`, onRemove: () => setSelectedBuyers(prev => prev.filter(x => x !== b)) }));
+    for (const { label, dataKey } of FILTER_FIELDS) {
+      const selected = dashFilters[dataKey] || [];
+      selected.forEach(v => tags.push({ key: `${dataKey}-${v}`, label: `${label}: ${v}`, onRemove: () => setDashFilters(prev => ({ ...prev, [dataKey]: (prev[dataKey] || []).filter(x => x !== v) })) }));
+    }
     return tags;
   })();
 
@@ -556,55 +554,35 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Type Filter */}
-          {typeOptions.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, minWidth: 36 }}>类型</span>
-              <button onClick={() => setSelectedTypes([])} style={{
-                padding: '6px 12px', borderRadius: 10, fontSize: 13, border: '1px solid #e8e8ed', cursor: 'pointer',
-                background: selectedTypes.length === 0 ? '#0071e3' : '#ffffff',
-                color: selectedTypes.length === 0 ? 'white' : '#515154',
-                fontWeight: selectedTypes.length === 0 ? 600 : 400,
-              }}>全部</button>
-              {typeOptions.map(t => {
-                const isActive = selectedTypes.includes(t);
-                return (
-                  <button key={t} onClick={() => setSelectedTypes(prev => isActive ? prev.filter(x => x !== t) : [...prev, t])} style={{
-                    padding: '6px 12px', borderRadius: 10, fontSize: 13, border: '1px solid #e8e8ed', cursor: 'pointer',
-                    background: isActive ? '#0071e3' : '#ffffff',
-                    color: isActive ? 'white' : '#515154',
-                    fontWeight: isActive ? 600 : 400,
-                    transition: 'all 0.15s'
-                  }}>{t}</button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Buyer Filter */}
-          {buyerOptions.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, minWidth: 36 }}>选品人</span>
-              <button onClick={() => setSelectedBuyers([])} style={{
-                padding: '6px 12px', borderRadius: 10, fontSize: 13, border: '1px solid #e8e8ed', cursor: 'pointer',
-                background: selectedBuyers.length === 0 ? '#0071e3' : '#ffffff',
-                color: selectedBuyers.length === 0 ? 'white' : '#515154',
-                fontWeight: selectedBuyers.length === 0 ? 600 : 400,
-              }}>全部</button>
-              {buyerOptions.map(b => {
-                const isActive = selectedBuyers.includes(b);
-                return (
-                  <button key={b} onClick={() => setSelectedBuyers(prev => isActive ? prev.filter(x => x !== b) : [...prev, b])} style={{
-                    padding: '6px 12px', borderRadius: 10, fontSize: 13, border: '1px solid #e8e8ed', cursor: 'pointer',
-                    background: isActive ? '#0071e3' : '#ffffff',
-                    color: isActive ? 'white' : '#515154',
-                    fontWeight: isActive ? 600 : 400,
-                    transition: 'all 0.15s'
-                  }}>{b}</button>
-                );
-              })}
-            </div>
-          )}
+          {/* Dynamic Field Filters */}
+          {FILTER_FIELDS.map(({ label, dataKey }) => {
+            const options: string[] = Array.from(new Set<string>(allAccounts.map((a: any) => String(a[dataKey] || '')))).filter(v => !!v).sort();
+            if (options.length === 0) return null;
+            const selected = dashFilters[dataKey] || [];
+            return (
+              <div key={dataKey} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, minWidth: 36 }}>{label}</span>
+                <button onClick={() => setDashFilters(prev => ({ ...prev, [dataKey]: [] }))} style={{
+                  padding: '6px 12px', borderRadius: 10, fontSize: 13, border: '1px solid #e8e8ed', cursor: 'pointer',
+                  background: selected.length === 0 ? '#0071e3' : '#ffffff',
+                  color: selected.length === 0 ? 'white' : '#515154',
+                  fontWeight: selected.length === 0 ? 600 : 400,
+                }}>全部</button>
+                {options.map(v => {
+                  const isActive = selected.includes(v);
+                  return (
+                    <button key={v} onClick={() => setDashFilters(prev => ({ ...prev, [dataKey]: isActive ? (prev[dataKey] || []).filter(x => x !== v) : [...(prev[dataKey] || []), v] }))} style={{
+                      padding: '6px 12px', borderRadius: 10, fontSize: 13, border: '1px solid #e8e8ed', cursor: 'pointer',
+                      background: isActive ? '#0071e3' : '#ffffff',
+                      color: isActive ? 'white' : '#515154',
+                      fontWeight: isActive ? 600 : 400,
+                      transition: 'all 0.15s'
+                    }}>{v}</button>
+                  );
+                })}
+              </div>
+            );
+          })};
 
           {/* Active filter tags */}
           {activeFilters.length > 0 && (
@@ -616,7 +594,7 @@ export default function DashboardPage() {
                   <button onClick={tag.onRemove} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 14, lineHeight: 1, color: '#0d9488', padding: 0 }}>×</button>
                 </span>
               ))}
-              <button onClick={() => { setDatePreset('近7天'); setDateFrom(''); setDateTo(''); setSelectedTypes([]); setSelectedBuyers([]); }} style={{ marginLeft: 'auto', padding: '4px 12px', fontSize: 12, border: 'none', background: '#f1f5f9', borderRadius: 6, cursor: 'pointer', color: '#64748b' }}>清除全部</button>
+              <button onClick={() => { setDatePreset('近7天'); setDateFrom(''); setDateTo(''); setDashFilters({}); }} style={{ marginLeft: 'auto', padding: '4px 12px', fontSize: 12, border: 'none', background: '#f1f5f9', borderRadius: 6, cursor: 'pointer', color: '#64748b' }}>清除全部</button>
             </div>
           )}
         </div>

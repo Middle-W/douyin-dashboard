@@ -113,7 +113,9 @@ export default function AdminPage() {
   const allKeys = new Set(fields.map(f => f.key));
   accounts.forEach(a => Object.keys(a).forEach(k => allKeys.add(k)));
 
-  const filterableFields = ['buyer','account_type','status','operator'];
+  const filterableFields = fields
+    .filter(f => !['name','id','created_at'].includes(f.key))
+    .map(f => f.key);
   const filterOptions = filterField
     ? Array.from(new Set(accounts.map(a => String(a[filterField] || '')))).filter(v => v).sort()
     : [];
