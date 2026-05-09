@@ -53,6 +53,11 @@ export default function AdminPage() {
   const [batchEditOpen, setBatchEditOpen] = useState(false);
   const [batchEditField, setBatchEditField] = useState('');
   const [batchEditValue, setBatchEditValue] = useState('');
+  const [batchUpdating, setBatchUpdating] = useState(false);
+
+  // Account filter state
+  const [filterField, setFilterField] = useState('');
+  const [filterValue, setFilterValue] = useState('');
 
   // Field manager state
   const [newFieldKey, setNewFieldKey] = useState('');
@@ -108,8 +113,16 @@ export default function AdminPage() {
   const allKeys = new Set(fields.map(f => f.key));
   accounts.forEach(a => Object.keys(a).forEach(k => allKeys.add(k)));
 
+  const filterableFields = ['buyer','account_type','status','operator'];
+  const filterOptions = filterField
+    ? Array.from(new Set(accounts.map(a => String(a[filterField] || '')))).filter(v => v).sort()
+    : [];
+
   const filtered = accounts
     .filter(a => {
+      if (filterField && filterValue) {
+        if (String(a[filterField] || '') !== filterValue) return false;
+      }
       if (!search.trim()) return true;
       const s = search.toLowerCase();
       return Array.from(allKeys).some(k => String(a[k] || '').toLowerCase().includes(s));
@@ -228,15 +241,14 @@ export default function AdminPage() {
   const batchUpdateAccounts = async () => {
     if (selectedAccounts.size === 0) { setMessage('请先选择要编辑的账号'); return; }
     if (!batchEditField) { setMessage('请选择要修改的字段'); return; }
+    setBatchUpdating(true);
     let success = 0, fail = 0;
     for (const name of selectedAccounts) {
       try {
         const acc = accounts.find((a: any) => String(a.name) === name);
         if (!acc) { fail++; continue; }
         const updateData: Record<string, string> = {};
-        // Copy all existing fields
         Object.keys(acc).forEach(k => { updateData[k] = String(acc[k] || ''); });
-        // Override the batch field
         updateData[batchEditField] = batchEditValue;
         const res = await fetch('/api/accounts/' + encodeURIComponent(name), {
           method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updateData)
@@ -246,6 +258,7 @@ export default function AdminPage() {
         success++;
       } catch { fail++; }
     }
+    setBatchUpdating(false);
     setMessage(`批量更新完成：成功 ${success} 条${fail > 0 ? `，失败 ${fail} 条` : ''}`);
     setBatchEditOpen(false);
     setBatchEditField('');
@@ -446,6 +459,27 @@ export default function AdminPage() {
         <div style={{ background: 'white', borderRadius: 20, padding: 20, marginBottom: 20, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
             <input type="text" placeholder="搜索账号..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 200, padding: '10px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 14, background: '#f5f5f7' }} />
+            <select value={filterField} onChange={e => { setFilterField(e.target.value); setFilterValue(''); }}
+              style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 13, minWidth: 100, background: 'white' }}>
+              <option value="">筛选字段</option>
+              {filterableFields.map(key => {
+                const label = fields.find(f => f.key === key)?.label || key;
+                return <option key={key} value={key}>{label}</option>;
+              })}
+            </select>
+            {filterField && (
+              <select value={filterValue} onChange={e => setFilterValue(e.target.value)}
+                style={{ padding: '10px 12px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 13, minWidth: 100, background: 'white' }}>
+                <option value="">全部</option>
+                {filterOptions.map(v => <option key={v} value={v}>{v}</option>)}
+              </select>
+            )}
+            {(filterField || filterValue) && (
+              <button onClick={() => { setFilterField(''); setFilterValue(''); }}
+                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e8e8ed', background: '#f5f5f7', color: '#515154', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}>
+                清除筛选
+              </button>
+            )}
             {selectedAccounts.size > 0 && (
               <>
                 <button onClick={() => setBatchEditOpen(!batchEditOpen)}
@@ -471,9 +505,9 @@ export default function AdminPage() {
               </select>
               <input type="text" value={batchEditValue} onChange={e => setBatchEditValue(e.target.value)}
                 placeholder="新值" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e8e8ed', fontSize: 13, minWidth: 140 }} />
-              <button onClick={batchUpdateAccounts}
-                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#0071e3', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                确认更新
+              <button onClick={batchUpdateAccounts} disabled={batchUpdating}
+                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: batchUpdating ? '#94a3b8' : '#0071e3', color: 'white', fontSize: 13, fontWeight: 600, cursor: batchUpdating ? 'not-allowed' : 'pointer' }}>
+                {batchUpdating ? '更新中...' : '确认更新'}
               </button>
               <button onClick={() => { setBatchEditOpen(false); setBatchEditField(''); setBatchEditValue(''); }}
                 style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e8e8ed', background: 'white', color: '#515154', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
