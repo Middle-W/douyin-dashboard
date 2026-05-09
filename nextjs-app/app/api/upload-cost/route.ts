@@ -24,33 +24,61 @@ export async function POST(request: NextRequest) {
 
     for (let i = 1; i < headers.length; i++) {
       const h = headers[i];
-      let dateStr: string;
-      if (typeof h === 'number') {
+      let dateStr: string | null = null;
+      if (h instanceof Date) {
+        dateStr = `${h.getFullYear()}-${String(h.getMonth() + 1).padStart(2, '0')}-${String(h.getDate()).padStart(2, '0')}`;
+      } else if (typeof h === 'number') {
         const date = new Date(1899, 11, 30 + h);
-        dateStr = date.toISOString().slice(0, 10);
+        dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       } else if (typeof h === 'string' && h.match(/^\d{4}-\d{2}-\d{2}$/)) {
         dateStr = h;
-      } else {
-        continue;
       }
-      dateCols.push({ idx: i, date: dateStr });
+      if (dateStr) {
+        dateCols.push({ idx: i, date: dateStr });
+      }
     }
 
     if (dateCols.length === 0) {
       return NextResponse.json({ error: 'No date columns found' }, { status: 400 });
     }
 
+    // Fetch all account names for prefix matching
+    const { data: allAccounts } = await supabaseAdmin.from('accounts').select('name');
+    const accountNames = (allAccounts || []).map((a: any) => a.name);
+
+    const nameMap: Record<string, string> = {};
+    const unmatched: string[] = [];
+
     const costs: any[] = [];
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
-      const accountName = String(row[0] || '').trim();
-      if (!accountName) continue;
+      const rawName = String(row[0] || '').trim();
+      if (!rawName) continue;
+
+      // Resolve name: exact match first, then prefix match
+      let resolvedName = nameMap[rawName];
+      if (!resolvedName) {
+        if (accountNames.includes(rawName)) {
+          resolvedName = rawName;
+        } else {
+          const prefixMatch = accountNames.find(n => n.startsWith(rawName));
+          if (prefixMatch) {
+            resolvedName = prefixMatch;
+          }
+        }
+        nameMap[rawName] = resolvedName || '';
+      }
+
+      if (!resolvedName) {
+        if (!unmatched.includes(rawName)) unmatched.push(rawName);
+        continue;
+      }
 
       for (const dc of dateCols) {
         const cost = parseFloat(row[dc.idx]) || 0;
         if (cost > 0) {
           costs.push({
-            account_name: accountName,
+            account_name: resolvedName,
             date: dc.date,
             cost: Math.round(cost * 100) / 100
           });
@@ -59,7 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (costs.length === 0) {
-      return NextResponse.json({ error: 'No cost data found' }, { status: 400 });
+      return NextResponse.json({ error: 'No cost data found', unmatched }, { status: 400 });
     }
 
     const { error } = await supabaseAdmin
@@ -68,13 +96,14 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Cost insert error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: error.message, unmatched }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
       accounts: new Set(costs.map(c => c.account_name)).size,
-      records: costs.length
+      records: costs.length,
+      unmatched: unmatched.length > 0 ? unmatched : undefined
     });
 
   } catch (err: any) {

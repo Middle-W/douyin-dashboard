@@ -1,120 +1,545 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 
-export default function AdminPage() {
-  const [orderFile, setOrderFile] = useState<File | null>(null);
-  const [costFile, setCostFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState('');
+interface Account { [key: string]: string | number; }
+interface FieldDef { id: number; key: string; label: string; show_in_admin: boolean; show_in_dashboard: boolean; is_system: boolean; sort_order: number; }
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
+function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button onClick={onChange} style={{ width: 40, height: 22, borderRadius: 11, border: 'none', background: checked ? '#0071e3' : '#d1d1d6', position: 'relative', cursor: 'pointer', padding: 0, flexShrink: 0, transition: 'background 0.2s' }}>
+      <span style={{ position: 'absolute', top: 2, left: checked ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: 'white', transition: 'left 0.2s', display: 'block', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }} />
+    </button>
+  );
+}
+
+export default function AdminPage() {
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [fields, setFields] = useState<FieldDef[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [message, setMessage] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+
+  // Field manager state
+  const [newFieldKey, setNewFieldKey] = useState('');
+  const [newFieldLabel, setNewFieldLabel] = useState('');
+  const [newFieldAdmin, setNewFieldAdmin] = useState(true);
+  const [newFieldDash, setNewFieldDash] = useState(false);
+
+  // Data management state
+  const [dataTab, setDataTab] = useState<'stats'|'costs'>('stats');
+  const [dataDate, setDataDate] = useState('');
+  const [dataList, setDataList] = useState<any[]>([]);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [dataMsg, setDataMsg] = useState('');
+  const [editingData, setEditingData] = useState<any>(null);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
   const loadAccounts = useCallback(async () => {
-    try { const res = await fetch('/api/accounts'); const data = await res.json(); setAccounts(data); }
-    catch { showToast('加载账号失败'); } finally { setLoading(false); }
+    try {
+      const res = await fetch('/api/accounts?t=' + Date.now(), { cache: 'no-store' });
+      const json = await res.json();
+      setAccounts(json.accounts || []);
+    } catch (e: any) { setError(e.message); }
   }, []);
 
-  useEffect(() => { loadAccounts(); }, [loadAccounts]);
-
-  const uploadOrders = async () => {
-    if (!orderFile) return;
-    setUploading(true);
-    const fd = new FormData(); fd.append('file', orderFile);
+  const loadFields = useCallback(async () => {
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.success) { setResult(data); showToast(`上传成功: ${data.accounts}个账号, 过滤${data.skippedRefund}笔退款`); loadAccounts(); }
-      else showToast(data.error || '上传失败');
-    } catch { showToast('上传出错'); } finally { setUploading(false); }
+      const res = await fetch('/api/account-fields?t=' + Date.now(), { cache: 'no-store' });
+      const json = await res.json();
+      setFields(json.fields || []);
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { loadAccounts(); loadFields(); }, [loadAccounts, loadFields]);
+
+  const adminFields = fields.filter(f => f.show_in_admin).sort((a, b) => a.sort_order - b.sort_order);
+  const allKeys = new Set(fields.map(f => f.key));
+  accounts.forEach(a => Object.keys(a).forEach(k => allKeys.add(k)));
+
+  const filtered = accounts
+    .filter(a => {
+      if (!search.trim()) return true;
+      const s = search.toLowerCase();
+      return Array.from(allKeys).some(k => String(a[k] || '').toLowerCase().includes(s));
+    })
+    .sort((a, b) => {
+      const ca = String(a.code || '').trim();
+      const cb = String(b.code || '').trim();
+      if (!ca && !cb) return 0;
+      if (!ca) return 1;
+      if (!cb) return -1;
+      return ca.localeCompare(cb, 'zh-CN');
+    });
+
+  const uploadFile = async (api: string, file: File, label: string) => {
+    setMessage('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch(api, { method: 'POST', body: formData });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setMessage(`${label} 上传成功` + (json.updated ? `，更新 ${json.updated} 条` : json.records ? `，共 ${json.records} 条` : ''));
+      if (api === '/api/upload-meta') loadAccounts();
+    } catch (err: any) { setMessage(err.message); }
   };
 
-  const uploadCosts = async () => {
-    if (!costFile) return;
-    setUploading(true);
-    const fd = new FormData(); fd.append('file', costFile);
+  const addField = async () => {
+    if (!newFieldKey.trim() || !newFieldLabel.trim()) { setMessage('字段key和名称不能为空'); return; }
     try {
-      const res = await fetch('/api/upload-cost', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.success) { showToast(`消耗上传成功: ${data.accounts}个账号, ${data.records}条记录`); }
-      else showToast(data.error || '上传失败');
-    } catch { showToast('上传出错'); } finally { setUploading(false); }
+      const res = await fetch('/api/account-fields', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: newFieldKey.trim(), label: newFieldLabel.trim(), show_in_admin: newFieldAdmin, show_in_dashboard: newFieldDash })
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setMessage('字段添加成功');
+      setNewFieldKey(''); setNewFieldLabel(''); setNewFieldAdmin(true); setNewFieldDash(false);
+      loadFields();
+    } catch (e: any) { setMessage(e.message); }
   };
 
-  const updateAccount = async (name: string, field: string, value: string) => {
+  const updateField = async (id: number, patch: Partial<FieldDef>) => {
     try {
-      const res = await fetch('/api/accounts', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, [field]: value }) });
-      if (res.ok) showToast('保存成功');
-    } catch { showToast('保存失败'); }
+      const res = await fetch(`/api/account-fields/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch)
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      loadFields();
+    } catch (e: any) { setMessage(e.message); }
+  };
+
+  const deleteField = async (id: number) => {
+    if (!confirm('确定删除该字段吗？数据不会丢失，但不再显示。')) return;
+    try {
+      const res = await fetch(`/api/account-fields/${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setMessage('字段删除成功');
+      loadFields();
+    } catch (e: any) { setMessage(e.message); }
+  };
+
+  const moveField = async (field: FieldDef, direction: -1 | 1) => {
+    const sorted = [...fields].sort((a, b) => a.sort_order - b.sort_order);
+    const idx = sorted.findIndex(f => f.id === field.id);
+    const swapIdx = idx + direction;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const other = sorted[swapIdx];
+    await updateField(field.id, { sort_order: other.sort_order });
+    await updateField(other.id, { sort_order: field.sort_order });
+    loadFields();
+  };
+
+  const saveAccount = async (formData: Record<string, string>) => {
+    if (!formData.name?.trim()) { setMessage('账号名称不能为空'); return; }
+    try {
+      const url = editingAccount ? '/api/accounts/' + encodeURIComponent(String(editingAccount.name)) : '/api/accounts';
+      const res = await fetch(url, { method: editingAccount ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData) });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setMessage(editingAccount ? '修改成功' : '新增成功');
+      setModalOpen(false);
+      loadAccounts();
+    } catch (e: any) { setMessage(e.message); }
+  };
+
+  const removeAccount = async (name: string) => {
+    if (!confirm('确定删除账号 "' + name + '" 吗？')) return;
+    try {
+      const res = await fetch('/api/accounts/' + encodeURIComponent(name), { method: 'DELETE' });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setMessage('删除成功');
+      loadAccounts();
+    } catch (e: any) { setMessage(e.message); }
+  };
+
+  const getLabel = (key: string) => fields.find(f => f.key === key)?.label || key;
+
+  const loadData = async (tab: 'stats'|'costs', date: string) => {
+    if (!date) return;
+    setDataLoading(true); setDataMsg(''); setSelectedKeys(new Set());
+    try {
+      const api = tab === 'stats' ? '/api/data-stats' : '/api/data-costs';
+      const res = await fetch(`${api}?date=${date}&t=${Date.now()}`, { cache: 'no-store' });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setDataList(tab === 'stats' ? json.stats : json.costs);
+    } catch (e: any) { setDataMsg(e.message); }
+    finally { setDataLoading(false); }
+  };
+
+  const saveData = async (tab: 'stats'|'costs', item: any) => {
+    setDataMsg('');
+    try {
+      const api = tab === 'stats' ? '/api/data-stats' : '/api/data-costs';
+      const res = await fetch(api, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setDataMsg('更新成功'); setEditingData(null); loadData(tab, dataDate);
+    } catch (e: any) { setDataMsg(e.message); }
+  };
+
+  const removeData = async (tab: 'stats'|'costs', account_name: string, date: string) => {
+    if (!confirm(`确定删除 ${account_name} ${date} 的数据？`)) return;
+    setDataMsg('');
+    try {
+      const api = tab === 'stats' ? '/api/data-stats' : '/api/data-costs';
+      const res = await fetch(`${api}?account_name=${encodeURIComponent(account_name)}&date=${date}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setDataMsg('删除成功'); loadData(tab, dataDate);
+    } catch (e: any) { setDataMsg(e.message); }
+  };
+
+  const batchDeleteData = async (tab: 'stats'|'costs') => {
+    if (selectedKeys.size === 0) { setDataMsg('请先选择要删除的数据'); return; }
+    if (!confirm(`确定批量删除选中的 ${selectedKeys.size} 条数据吗？`)) return;
+    setDataMsg('');
+    let success = 0, fail = 0;
+    for (const key of Array.from(selectedKeys)) {
+      const [account_name, date] = key.split('|');
+      try {
+        const api = tab === 'stats' ? '/api/data-stats' : '/api/data-costs';
+        const res = await fetch(`${api}?account_name=${encodeURIComponent(account_name)}&date=${date}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        success++;
+      } catch (e) { fail++; }
+    }
+    setDataMsg(`删除完成：成功 ${success} 条${fail > 0 ? `，失败 ${fail} 条` : ''}`);
+    setSelectedKeys(new Set());
+    loadData(tab, dataDate);
   };
 
   return (
-    <div style={{ background: '#f3f4f6', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-      <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)', color: 'white', padding: '32px 24px' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1 style={{ fontSize: 24, margin: 0, fontWeight: 800 }}>⚙️ 数据管理中心</h1>
-          <a href="/" style={{ color: 'white', textDecoration: 'none', padding: '8px 16px', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 8 }}>📊 返回看板</a>
+    <div style={{ background: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      <div style={{ background: '#ffffff', color: '#1d1d1f', padding: '24px', borderBottom: '1px solid #e8e8ed' }}>
+        <div style={{ maxWidth: 1600, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h1 style={{ fontSize: 24, margin: '0 0 4px', fontWeight: 700, letterSpacing: '-0.02em' }}>账号管理后台</h1>
+            <div style={{ fontSize: 13, color: '#86868b' }}>共 {accounts.length} 个账号 | {fields.length} 个字段</div>
+          </div>
+          <a href="/" style={{ color: '#0071e3', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}>← 返回看板</a>
         </div>
       </div>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
-        {/* Order Upload */}
-        <div style={{ background: 'white', padding: 24, borderRadius: 16, marginBottom: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-          <h2 style={{ fontSize: 16, marginBottom: 16, fontWeight: 700 }}>📦 上传精选订单 Excel</h2>
-          <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>系统会自动过滤退款/退货订单，并扣除10%平台技术服务费计算净佣金</p>
-          <input type="file" accept=".xlsx" onChange={e => setOrderFile(e.target.files?.[0] || null)} />
-          <button onClick={uploadOrders} disabled={!orderFile || uploading} style={{ marginLeft: 12, padding: '10px 20px', background: '#0f172a', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
-            {uploading ? '上传中...' : '解析并入库'}
-          </button>
-          {result && (
-            <div style={{ marginTop: 16, padding: 16, background: '#f0fdf4', borderRadius: 10, fontSize: 14, color: '#166534' }}>
-              <strong>✅ 解析成功</strong><br/>
-              账号: {result.accounts} | 日期范围: {result.dateFrom} ~ {result.dateTo}<br/>
-              已过滤退款订单: {result.skippedRefund} 笔
+      <div style={{ maxWidth: 1600, margin: '0 auto', padding: 24 }}>
+        {/* Upload Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16, marginBottom: 20 }}>
+          {[
+            { title: '📦 上传订单数据', desc: '精选订单Excel，按天聚合', api: '/api/upload' },
+            { title: '🔥 上传消耗数据', desc: '消耗Excel（账号名+日期列+金额）', api: '/api/upload-cost' },
+            { title: '📋 上传账号基础信息', desc: '批量更新类型、选品人等', api: '/api/upload-meta' },
+          ].map(card => (
+            <div key={card.api} style={{ background: 'white', borderRadius: 20, padding: 24, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: '#1d1d1f' }}>{card.title}</div>
+              <div style={{ fontSize: 12, color: '#86868b', marginBottom: 16 }}>{card.desc}</div>
+              <label style={{ display: 'inline-block', padding: '8px 16px', borderRadius: 10, background: '#f5f5f7', color: '#0071e3', fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid #e8e8ed' }}>
+                选择文件
+                <input type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(card.api, f, card.title); e.target.value = ''; }} />
+              </label>
             </div>
-          )}
+          ))}
         </div>
 
-        {/* Cost Upload */}
-        <div style={{ background: 'white', padding: 24, borderRadius: 16, marginBottom: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-          <h2 style={{ fontSize: 16, marginBottom: 16, fontWeight: 700 }}>🔥 上传消耗数据 Excel</h2>
-          <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>格式：第一列账号名称，后面各列为日期（支持Excel日期格式或YYYY-MM-DD）</p>
-          <input type="file" accept=".xlsx" onChange={e => setCostFile(e.target.files?.[0] || null)} />
-          <button onClick={uploadCosts} disabled={!costFile || uploading} style={{ marginLeft: 12, padding: '10px 20px', background: '#0f172a', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
-            {uploading ? '上传中...' : '上传消耗'}
+        {/* Field Manager */}
+        <div style={{ background: 'white', borderRadius: 20, padding: 24, marginBottom: 20, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 16px', color: '#1d1d1f' }}>🔧 字段管理</h2>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16, alignItems: 'flex-end' }}>
+            <div>
+              <label style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>字段key（英文）</label>
+              <input value={newFieldKey} onChange={e => setNewFieldKey(e.target.value)} placeholder="如：group" style={{ display: 'block', marginTop: 4, padding: '8px 12px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 14, width: 140 }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>显示名称</label>
+              <input value={newFieldLabel} onChange={e => setNewFieldLabel(e.target.value)} placeholder="如：分组" style={{ display: 'block', marginTop: 4, padding: '8px 12px', borderRadius: 6, border: '1px solid #e2e8f0', fontSize: 14, width: 140 }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 12, color: '#64748b' }}>管理后台</label>
+              <ToggleSwitch checked={newFieldAdmin} onChange={() => setNewFieldAdmin(v => !v)} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 12, color: '#64748b' }}>看板显示</label>
+              <ToggleSwitch checked={newFieldDash} onChange={() => setNewFieldDash(v => !v)} />
+            </div>
+            <button onClick={addField} style={{ padding: '8px 16px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ 添加字段</button>
+          </div>
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: '#f5f5f7' }}>
+                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>字段key</th>
+                <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>显示名称</th>
+                <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid #e2e8f0' }}>管理后台</th>
+                <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid #e2e8f0' }}>看板显示</th>
+                <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid #e2e8f0', width: 100 }}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {fields.sort((a, b) => a.sort_order - b.sort_order).map(f => (
+                <tr key={f.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '10px 12px', fontFamily: 'monospace', color: '#64748b' }}>{f.key}</td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <input
+                      defaultValue={f.label}
+                      onBlur={e => { if (e.target.value !== f.label) updateField(f.id, { label: e.target.value }); }}
+                      style={{ padding: '4px 8px', borderRadius: 4, border: '1px solid #e2e8f0', fontSize: 13, width: 120 }}
+                    />
+                  </td>
+                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                    <ToggleSwitch checked={f.show_in_admin} onChange={() => updateField(f.id, { show_in_admin: !f.show_in_admin })} />
+                  </td>
+                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                    <ToggleSwitch checked={f.show_in_dashboard} onChange={() => updateField(f.id, { show_in_dashboard: !f.show_in_dashboard })} />
+                  </td>
+                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                    <button onClick={() => moveField(f, -1)} disabled={f.sort_order <= 1} style={{ padding: '2px 6px', fontSize: 11, marginRight: 4 }}>↑</button>
+                    <button onClick={() => moveField(f, 1)} style={{ padding: '2px 6px', fontSize: 11, marginRight: 4 }}>↓</button>
+                    <button
+                      onClick={() => f.is_system ? alert('系统字段不能删除') : deleteField(f.id)}
+                      style={{
+                        padding: '2px 6px', fontSize: 11,
+                        color: f.is_system ? '#94a3b8' : '#dc2626',
+                        border: f.is_system ? '1px solid #e2e8f0' : '1px solid #fecaca',
+                        background: f.is_system ? '#f8fafc' : '#fef2f2',
+                        borderRadius: 4, cursor: f.is_system ? 'not-allowed' : 'pointer'
+                      }}
+                    >删除</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {message && (
+          <div style={{ background: '#fff9c4', border: '1px solid #f9a825', borderRadius: 12, padding: '12px 18px', marginBottom: 16, fontSize: 13, color: '#8a6d0b' }}>{message}</div>
+        )}
+
+        {/* Account Toolbar */}
+        <div style={{ background: 'white', borderRadius: 20, padding: 20, marginBottom: 20, boxShadow: '0 4px 24px rgba(0,0,0,0.04)', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <input type="text" placeholder="搜索账号..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 200, padding: '10px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 14, background: '#f5f5f7' }} />
+          <button onClick={() => { setEditingAccount(null); setModalOpen(true); }} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>+ 新增账号</button>
+        </div>
+
+        {loading ? <div style={{ textAlign: 'center', padding: 40 }}>加载中...</div> :
+         error ? <div style={{ textAlign: 'center', padding: 40, color: '#ef4444' }}>错误: {error}</div> : (
+          <div style={{ background: 'white', borderRadius: 20, boxShadow: '0 4px 24px rgba(0,0,0,0.04)', overflow: 'hidden', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 600 }}>
+              <thead>
+                <tr style={{ background: '#f5f5f7' }}>
+                  {adminFields.map(f => (
+                    <th key={f.key} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{f.label}</th>
+                  ))}
+                  <th style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 600, color: '#475569', borderBottom: '1px solid #e2e8f0', width: 100, whiteSpace: 'nowrap' }}>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(acc => (
+                  <tr key={acc.name} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    {adminFields.map(f => (
+                      <td key={f.key} style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                        {f.key === 'account_type'
+                          ? <span style={{ padding: '2px 10px', borderRadius: 12, background: '#eef2ff', color: '#4f46e5', fontSize: 12, fontWeight: 500 }}>{acc[f.key] || '-'}</span>
+                          : (acc[f.key] || '-')}
+                      </td>
+                    ))}
+                    <td style={{ padding: '12px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      <button onClick={() => { setEditingAccount(acc); setModalOpen(true); }} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #e8e8ed', background: 'white', fontSize: 12, cursor: 'pointer', marginRight: 6, color: '#0071e3' }}>编辑</button>
+                      <button onClick={() => removeAccount(String(acc.name))} style={{ padding: '4px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fef2f2', color: '#ff3b30', fontSize: 12, cursor: 'pointer' }}>删除</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filtered.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>没有找到匹配的账号</div>}
+          </div>
+        )}
+        {/* Data Manager */}
+        <div style={{ background: 'white', borderRadius: 20, padding: 24, marginTop: 24, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+        <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 16px', color: '#1d1d1f' }}>📊 数据管理</h2>
+
+        {/* Tab Switch */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          {[
+            { key: 'stats' as const, label: '订单数据' },
+            { key: 'costs' as const, label: '消耗数据' },
+          ].map(t => (
+            <button key={t.key} onClick={() => { setDataTab(t.key); setDataList([]); setDataMsg(''); }}
+              style={{ padding: '8px 18px', borderRadius: 10, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                background: dataTab === t.key ? '#0071e3' : '#f5f5f7', color: dataTab === t.key ? 'white' : '#1d1d1f' }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Date picker + query */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input type="date" value={dataDate} onChange={e => setDataDate(e.target.value)}
+            style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 14 }} />
+          <button onClick={() => loadData(dataTab, dataDate)}
+            style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            查询
           </button>
+          {dataList.length > 0 && (
+            <button onClick={() => batchDeleteData(dataTab)}
+              style={{ padding: '10px 18px', borderRadius: 10, border: '1px solid #fecaca', background: selectedKeys.size > 0 ? '#fef2f2' : '#f5f5f7', color: selectedKeys.size > 0 ? '#ff3b30' : '#86868b', fontSize: 13, fontWeight: 600, cursor: selectedKeys.size > 0 ? 'pointer' : 'not-allowed' }}>
+              批量删除 {selectedKeys.size > 0 ? `(${selectedKeys.size})` : ''}
+            </button>
+          )}
+          {dataMsg && <span style={{ fontSize: 13, color: dataMsg.includes('成功') ? '#34c759' : '#ff3b30' }}>{dataMsg}</span>}
         </div>
 
-        {/* Accounts Table */}
-        <div style={{ background: 'white', padding: 24, borderRadius: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
-          <h2 style={{ fontSize: 16, marginBottom: 16, fontWeight: 700 }}>📝 账号备注信息 ({accounts.length})</h2>
-          {loading ? <p>加载中...</p> : (
+        {dataLoading ? <div style={{ textAlign: 'center', padding: 30, color: '#86868b' }}>加载中...</div> : (
+          dataList.length > 0 ? (
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead><tr style={{ background: '#f8fafc' }}>
-                  {['账号','选品人','状态','账号类型'].map(h => (
-                    <th key={h} style={{ padding: 10, textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#475569', borderBottom: '2px solid #e2e8f0' }}>{h}</th>
-                  ))}
-                </tr></thead>
+                <thead>
+                  <tr style={{ background: '#f5f5f7' }}>
+                    <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid #e8e8ed', width: 40 }}>
+                      <input type="checkbox" checked={dataList.length > 0 && selectedKeys.size === dataList.length} onChange={e => {
+                        if (e.target.checked) {
+                          const all = new Set<string>();
+                          dataList.forEach((item: any) => all.add(`${item.account_name}|${item.date}`));
+                          setSelectedKeys(all);
+                        } else {
+                          setSelectedKeys(new Set());
+                        }
+                      }} style={{ cursor: 'pointer', width: 16, height: 16 }} />
+                    </th>
+                    <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid #e8e8ed' }}>账号</th>
+                    {dataTab === 'stats' && (
+                      <>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid #e8e8ed' }}>单量</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid #e8e8ed' }}>净佣金</th>
+                      </>
+                    )}
+                    {dataTab === 'costs' && (
+                      <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid #e8e8ed' }}>消耗</th>
+                    )}
+                    <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid #e8e8ed', width: 140 }}>操作</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {accounts.map(acc => (
-                    <tr key={acc.name}>
-                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #e2e8f0', fontWeight: 600 }}>{acc.name}</td>
-                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #e2e8f0' }}><input defaultValue={acc.buyer || ''} onBlur={e => updateAccount(acc.name, 'buyer', e.target.value)} style={{ padding: 4, border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 13 }} /></td>
-                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #e2e8f0' }}><input defaultValue={acc.status || ''} onBlur={e => updateAccount(acc.name, 'status', e.target.value)} style={{ padding: 4, border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 13 }} /></td>
-                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #e2e8f0' }}><input defaultValue={acc.account_type || ''} onBlur={e => updateAccount(acc.name, 'account_type', e.target.value)} style={{ padding: 4, border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 13 }} /></td>
-                    </tr>
-                  ))}
+                  {dataList.map((item, idx) => {
+                    const isEdit = editingData && editingData.account_name === item.account_name && editingData.date === item.date;
+                    return (
+                      <tr key={item.account_name + item.date} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 1 ? '#fafafa' : '#fff' }}>
+                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                          <input type="checkbox" checked={selectedKeys.has(`${item.account_name}|${item.date}`)} onChange={e => {
+                            const key = `${item.account_name}|${item.date}`;
+                            const next = new Set(selectedKeys);
+                            if (e.target.checked) next.add(key); else next.delete(key);
+                            setSelectedKeys(next);
+                          }} style={{ cursor: 'pointer', width: 16, height: 16 }} />
+                        </td>
+                        <td style={{ padding: '10px 12px', fontWeight: 500 }}>{item.account_name}</td>
+                        {dataTab === 'stats' && (
+                          <>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                              {isEdit ? (
+                                <input type="number" value={editingData.orders} onChange={e => setEditingData({...editingData, orders: e.target.value})}
+                                  style={{ width: 70, padding: '4px 8px', borderRadius: 6, border: '1px solid #e8e8ed', fontSize: 13 }} />
+                              ) : item.orders}
+                            </td>
+                            <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                              {isEdit ? (
+                                <input type="number" step="0.01" value={editingData.net_income} onChange={e => setEditingData({...editingData, net_income: e.target.value})}
+                                  style={{ width: 90, padding: '4px 8px', borderRadius: 6, border: '1px solid #e8e8ed', fontSize: 13 }} />
+                              ) : item.net_income}
+                            </td>
+                          </>
+                        )}
+                        {dataTab === 'costs' && (
+                          <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                            {isEdit ? (
+                              <input type="number" step="0.01" value={editingData.cost} onChange={e => setEditingData({...editingData, cost: e.target.value})}
+                                style={{ width: 90, padding: '4px 8px', borderRadius: 6, border: '1px solid #e8e8ed', fontSize: 13 }} />
+                            ) : item.cost}
+                          </td>
+                        )}
+                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                          {isEdit ? (
+                            <>
+                              <button onClick={() => saveData(dataTab, editingData)} style={{ padding: '3px 8px', borderRadius: 6, border: 'none', background: '#0071e3', color: 'white', fontSize: 11, cursor: 'pointer', marginRight: 4 }}>保存</button>
+                              <button onClick={() => setEditingData(null)} style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #e8e8ed', background: 'white', fontSize: 11, cursor: 'pointer' }}>取消</button>
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => setEditingData({...item})} style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #e8e8ed', background: 'white', fontSize: 11, cursor: 'pointer', marginRight: 4, color: '#0071e3' }}>编辑</button>
+                              <button onClick={() => removeData(dataTab, item.account_name, item.date)} style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', color: '#ff3b30', fontSize: 11, cursor: 'pointer' }}>删除</button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
+          ) : dataDate ? (
+            <div style={{ textAlign: 'center', padding: 30, color: '#86868b', fontSize: 13 }}>该日期暂无数据</div>
+          ) : null
+        )}
       </div>
 
-      {toast && <div style={{ position: 'fixed', bottom: 24, right: 24, background: '#0f172a', color: 'white', padding: '12px 20px', borderRadius: 10, zIndex: 9999 }}>{toast}</div>}
+      {/* Edit Modal */}
+      {modalOpen && (
+        <EditModal account={editingAccount} fields={fields} getLabel={getLabel} onSave={saveAccount} onClose={() => setModalOpen(false)} />
+      )}
+    </div>
+  </div>
+  );
+}
+
+function EditModal({ account, fields, getLabel, onSave, onClose }: {
+  account: Account | null; fields: FieldDef[]; getLabel: (k: string) => string;
+  onSave: (data: Record<string, string>) => void; onClose: () => void;
+}) {
+  const [form, setForm] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const init: Record<string, string> = {};
+    fields.forEach(f => { init[f.key] = account ? String(account[f.key] || '') : ''; });
+    // Also include any extra keys from account
+    if (account) Object.keys(account).forEach(k => { if (!(k in init)) init[k] = String(account[k] || ''); });
+    setForm(init);
+  }, [account, fields]);
+
+  const ordered = [...fields].sort((a, b) => a.sort_order - b.sort_order);
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={onClose}>
+      <div style={{ background: 'white', borderRadius: 20, padding: 32, width: 480, maxWidth: '90vw', maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
+        <h2 style={{ margin: '0 0 20px', fontSize: 18 }}>{account ? '编辑账号' : '新增账号'}</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {ordered.map(f => (
+            <div key={f.key}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 4 }}>
+                {f.label} {f.key === 'name' ? '*' : ''}
+              </label>
+              {f.key === 'remark' ? (
+                <textarea value={form[f.key] || ''} onChange={e => setForm({ ...form, [f.key]: e.target.value })} rows={3}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 14, boxSizing: 'border-box', resize: 'vertical' }} />
+              ) : (
+                <input type="text" value={form[f.key] || ''} onChange={e => setForm({ ...form, [f.key]: e.target.value })}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 14, boxSizing: 'border-box', background: 'white' }} />
+              )}
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
+          <button onClick={() => onSave(form)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>保存</button>
+          <button onClick={onClose} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e8e8ed', background: 'white', fontSize: 14, cursor: 'pointer', color: '#1d1d1f' }}>取消</button>
+        </div>
+      </div>
     </div>
   );
 }

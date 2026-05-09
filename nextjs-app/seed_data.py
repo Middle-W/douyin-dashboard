@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import openpyxl, requests
 from collections import defaultdict
+from datetime import datetime, timedelta
 
 URL = 'https://nlhhktqhupqnxnjxwqzd.supabase.co'
 KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5saGhrdHFodXBxbnhuanh3cXpkIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3Nzk5NzI1MiwiZXhwIjoyMDkzNTczMjUyfQ.WmMiO-3RATmCydfs74WhIPvtRZkMWjCi17ZMltIW7n0'
@@ -17,7 +18,12 @@ def main():
     wb = openpyxl.load_workbook('../jingxuan_orders_2026050602293354.xlsx')
     ws = wb.active
     
-    accounts = defaultdict(lambda: {'operator': '', 'type': '小店', 'daily': defaultdict(int), 'totalIncome': 0, 'totalAmount': 0, 'totalNetIncome': 0})
+    # Structure: accounts[account_name] = {'operator': '', 'type': '', 'daily': {date: {orders, income, amount, net_income}}}
+    accounts = defaultdict(lambda: {
+        'operator': '', 
+        'type': '小店', 
+        'daily': defaultdict(lambda: {'orders': 0, 'income': 0.0, 'amount': 0.0, 'net_income': 0.0})
+    })
     skipped_refund = 0
     
     for row in ws.iter_rows(min_row=2, values_only=True):
@@ -49,10 +55,12 @@ def main():
         
         accounts[account]['operator'] = operator or accounts[account]['operator']
         accounts[account]['type'] = account_type or accounts[account]['type']
-        accounts[account]['daily'][date] += 1
-        accounts[account]['totalIncome'] += income
-        accounts[account]['totalAmount'] += amount
-        accounts[account]['totalNetIncome'] += income * 0.9
+        
+        # Aggregate BY DAY
+        accounts[account]['daily'][date]['orders'] += 1
+        accounts[account]['daily'][date]['income'] += income
+        accounts[account]['daily'][date]['amount'] += amount
+        accounts[account]['daily'][date]['net_income'] += income * 0.9
     
     # Read meta
     try:
@@ -88,17 +96,17 @@ def main():
         res = requests.post(f'{URL}/rest/v1/accounts', headers={**headers, 'Prefer': 'resolution=merge-duplicates,return=minimal'}, json=chunk)
         print('Accounts batch:', res.status_code)
     
-    # Insert stats
+    # Insert stats - NOW WITH DAILY VALUES (not totals)
     stats = []
     for acc, data in accounts.items():
-        for date, orders in data['daily'].items():
+        for date, day_data in data['daily'].items():
             stats.append({
                 'account_name': acc,
                 'date': date,
-                'orders': orders,
-                'income': round(data['totalIncome'], 2),
-                'amount': round(data['totalAmount'], 2),
-                'net_income': round(data['totalNetIncome'], 2)
+                'orders': day_data['orders'],
+                'income': round(day_data['income'], 2),
+                'amount': round(day_data['amount'], 2),
+                'net_income': round(day_data['net_income'], 2)
             })
     
     print(f'Inserting {len(stats)} daily records...')
@@ -113,7 +121,6 @@ def main():
         ws_cost = wb_cost.active
         cost_headers = [cell.value for cell in ws_cost[1]]
         
-        from datetime import datetime, timedelta
         date_cols = []
         for i, h in enumerate(cost_headers[1:], 1):
             if isinstance(h, int):
