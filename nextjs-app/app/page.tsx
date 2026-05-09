@@ -40,14 +40,8 @@ export default function DashboardPage() {
   const [datePreset, setDatePreset] = useState('近7天');
   // Dynamic filters: { dataKey: [selectedValues] }
   const [dashFilters, setDashFilters] = useState<Record<string, string[]>>({});
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
 
-  // Filter field config (key = db field, dataKey = key in dashboard data)
-  const FILTER_FIELDS: { key: string; label: string; dataKey: string }[] = [
-    { key: 'account_type', label: '类型', dataKey: 'accountType' },
-    { key: 'buyer', label: '选品人', dataKey: 'metaBuyer' },
-    { key: 'status', label: '状态', dataKey: 'metaStatus' },
-    { key: 'operator', label: '运营', dataKey: 'operator' },
-  ];
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [pickerMonth, setPickerMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const datePickerRef = useRef<HTMLDivElement>(null);
@@ -139,6 +133,24 @@ export default function DashboardPage() {
   // Pre-compute display data (must be before any useEffect to avoid TDZ)
   const allAccounts = data?.accounts || [];
 
+  // Map db field key to dashboard data key
+  function getDashDataKey(fieldKey: string) {
+    const map: Record<string, string> = { account_type: 'accountType', buyer: 'metaBuyer', status: 'metaStatus' };
+    return map[fieldKey] || fieldKey;
+  }
+
+  // Dynamically build filter fields from fields config + actual data
+  const allFilterFields: { key: string; label: string; dataKey: string }[] = useMemo(() => {
+    if (!data) return [];
+    return (data.fields || [])
+      .filter((f: any) => f.show_in_dashboard && !['name','id','created_at'].includes(f.key))
+      .map((f: any) => ({ key: f.key, label: f.label, dataKey: getDashDataKey(f.key) }))
+      .filter((f: any) => allAccounts.some((a: any) => !!a[f.dataKey]));
+  }, [data, allAccounts]);
+
+  const primaryFilters = allFilterFields.slice(0, 3);
+  const moreFilters = allFilterFields.slice(3);
+
   // Effective date range
   const effectiveDateRange = (() => {
     if (!data) return { from: '', to: '', dates: [] as string[] };
@@ -164,7 +176,7 @@ export default function DashboardPage() {
   const displayAccounts = (() => {
     if (!data) return [];
     let result = allAccounts;
-    for (const { dataKey } of FILTER_FIELDS) {
+    for (const { dataKey } of allFilterFields) {
       const selected = dashFilters[dataKey] || [];
       if (selected.length > 0) {
         result = result.filter((a: any) => selected.includes(a[dataKey]));
@@ -191,7 +203,7 @@ export default function DashboardPage() {
     } else if (datePreset === '自定义' && dateFrom && dateTo) {
       tags.push({ key: 'date', label: `📅 ${dateFrom} ~ ${dateTo}`, onRemove: () => { setDateFrom(''); setDateTo(''); setDatePreset('近7天'); } });
     }
-    for (const { label, dataKey } of FILTER_FIELDS) {
+    for (const { label, dataKey } of allFilterFields) {
       const selected = dashFilters[dataKey] || [];
       selected.forEach(v => tags.push({ key: `${dataKey}-${v}`, label: `${label}: ${v}`, onRemove: () => setDashFilters(prev => ({ ...prev, [dataKey]: (prev[dataKey] || []).filter(x => x !== v) })) }));
     }
@@ -554,8 +566,8 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Dynamic Field Filters */}
-          {FILTER_FIELDS.map(({ label, dataKey }) => {
+          {/* Primary Field Filters */}
+          {primaryFilters.map(({ label, dataKey }: { label: string; dataKey: string }) => {
             const options: string[] = Array.from(new Set<string>(allAccounts.map((a: any) => String(a[dataKey] || '')))).filter(v => !!v).sort();
             if (options.length === 0) return null;
             const selected = dashFilters[dataKey] || [];
@@ -582,7 +594,49 @@ export default function DashboardPage() {
                 })}
               </div>
             );
-          })};
+          })}
+
+          {/* More Filters */}
+          {moreFilters.length > 0 && (
+            <div style={{ marginBottom: 14 }}>
+              <button onClick={() => setShowMoreFilters(!showMoreFilters)}
+                style={{ padding: '6px 14px', borderRadius: 10, border: '1px solid #e8e8ed', background: showMoreFilters ? '#f0fdfa' : '#ffffff', color: '#0f766e', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                {showMoreFilters ? '收起筛选' : '更多筛选'} {showMoreFilters ? '▲' : '▼'}
+              </button>
+              {showMoreFilters && (
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {moreFilters.map(({ label, dataKey }: { label: string; dataKey: string }) => {
+                    const options: string[] = Array.from(new Set<string>(allAccounts.map((a: any) => String(a[dataKey] || '')))).filter(v => !!v).sort();
+                    if (options.length === 0) return null;
+                    const selected = dashFilters[dataKey] || [];
+                    return (
+                      <div key={dataKey} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, minWidth: 36 }}>{label}</span>
+                        <button onClick={() => setDashFilters(prev => ({ ...prev, [dataKey]: [] }))} style={{
+                          padding: '6px 12px', borderRadius: 10, fontSize: 13, border: '1px solid #e8e8ed', cursor: 'pointer',
+                          background: selected.length === 0 ? '#0071e3' : '#ffffff',
+                          color: selected.length === 0 ? 'white' : '#515154',
+                          fontWeight: selected.length === 0 ? 600 : 400,
+                        }}>全部</button>
+                        {options.map(v => {
+                          const isActive = selected.includes(v);
+                          return (
+                            <button key={v} onClick={() => setDashFilters(prev => ({ ...prev, [dataKey]: isActive ? (prev[dataKey] || []).filter(x => x !== v) : [...(prev[dataKey] || []), v] }))} style={{
+                              padding: '6px 12px', borderRadius: 10, fontSize: 13, border: '1px solid #e8e8ed', cursor: 'pointer',
+                              background: isActive ? '#0071e3' : '#ffffff',
+                              color: isActive ? 'white' : '#515154',
+                              fontWeight: isActive ? 600 : 400,
+                              transition: 'all 0.15s'
+                            }}>{v}</button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Active filter tags */}
           {activeFilters.length > 0 && (
