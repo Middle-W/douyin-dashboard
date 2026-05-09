@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface Account { [key: string]: string | number; }
 interface FieldDef { id: number; key: string; label: string; show_in_admin: boolean; show_in_dashboard: boolean; is_system: boolean; sort_order: number; }
@@ -10,6 +10,34 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () =>
       <span style={{ position: 'absolute', top: 2, left: checked ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: 'white', transition: 'left 0.2s', display: 'block', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }} />
     </button>
   );
+}
+
+function sameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function fmtYMD(y: number, m: number, d: number) {
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function getCalendarDays(year: number, month: number) {
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month + 1, 0);
+  const weekday = first.getDay();
+  const offset = weekday === 0 ? 6 : weekday - 1;
+  const days: { date: Date; current: boolean }[] = [];
+  const prevLast = new Date(year, month, 0);
+  for (let i = offset - 1; i >= 0; i--) {
+    days.push({ date: new Date(prevLast.getFullYear(), prevLast.getMonth(), prevLast.getDate() - i), current: false });
+  }
+  for (let i = 1; i <= last.getDate(); i++) {
+    days.push({ date: new Date(year, month, i), current: true });
+  }
+  const need = 42 - days.length;
+  for (let i = 1; i <= need; i++) {
+    days.push({ date: new Date(year, month + 1, i), current: false });
+  }
+  return days;
 }
 
 export default function AdminPage() {
@@ -37,6 +65,11 @@ export default function AdminPage() {
   const [editingData, setEditingData] = useState<any>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
+  // Data calendar picker
+  const [showDataCalendar, setShowDataCalendar] = useState(false);
+  const [dataCalMonth, setDataCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
+  const dataCalendarRef = useRef<HTMLDivElement>(null);
+
   const loadAccounts = useCallback(async () => {
     try {
       const res = await fetch('/api/accounts?t=' + Date.now(), { cache: 'no-store' });
@@ -55,6 +88,17 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => { loadAccounts(); loadFields(); }, [loadAccounts, loadFields]);
+
+  // Close calendar on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dataCalendarRef.current && !dataCalendarRef.current.contains(e.target as Node)) {
+        setShowDataCalendar(false);
+      }
+    }
+    if (showDataCalendar) { document.addEventListener('mousedown', handleClick); }
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showDataCalendar]);
 
   const adminFields = fields.filter(f => f.show_in_admin).sort((a, b) => a.sort_order - b.sort_order);
   const allKeys = new Set(fields.map(f => f.key));
@@ -226,7 +270,10 @@ export default function AdminPage() {
             <h1 style={{ fontSize: 24, margin: '0 0 4px', fontWeight: 700, letterSpacing: '-0.02em' }}>账号管理后台</h1>
             <div style={{ fontSize: 13, color: '#86868b' }}>共 {accounts.length} 个账号 | {fields.length} 个字段</div>
           </div>
-          <a href="/" style={{ color: '#0071e3', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}>← 返回看板</a>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <button onClick={() => document.getElementById('data-manager')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '8px 16px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>📊 数据管理</button>
+            <a href="/" style={{ color: '#0071e3', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}>← 返回看板</a>
+          </div>
         </div>
       </div>
 
@@ -363,7 +410,7 @@ export default function AdminPage() {
           </div>
         )}
         {/* Data Manager */}
-        <div style={{ background: 'white', borderRadius: 20, padding: 24, marginTop: 24, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+        <div id="data-manager" style={{ background: 'white', borderRadius: 20, padding: 24, marginTop: 24, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
         <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 16px', color: '#1d1d1f' }}>📊 数据管理</h2>
 
         {/* Tab Switch */}
@@ -382,8 +429,48 @@ export default function AdminPage() {
 
         {/* Date picker + query */}
         <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input type="date" value={dataDate} onChange={e => setDataDate(e.target.value)}
-            style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 14 }} />
+          <div ref={dataCalendarRef} style={{ position: 'relative' }}>
+            <button onClick={() => setShowDataCalendar(!showDataCalendar)}
+              style={{ padding: '10px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 14, background: 'white', cursor: 'pointer', minWidth: 120, textAlign: 'left', display: 'inline-flex', alignItems: 'center', gap: 6, color: dataDate ? '#1d1d1f' : '#86868b' }}>
+              {dataDate || '选择日期'} <span style={{ fontSize: 14 }}>📅</span>
+            </button>
+            {showDataCalendar && (
+              <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 100, background: 'white', padding: 16, borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.12)', width: 280, border: '1px solid #f1f5f9', userSelect: 'none' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <button onClick={(e) => { e.stopPropagation(); setDataCalMonth(new Date(dataCalMonth.getFullYear(), dataCalMonth.getMonth() - 1)); }} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666', padding: '4px 10px', borderRadius: 6 }}>‹</button>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>{dataCalMonth.getFullYear()}年{dataCalMonth.getMonth() + 1}月</span>
+                  <button onClick={(e) => { e.stopPropagation(); setDataCalMonth(new Date(dataCalMonth.getFullYear(), dataCalMonth.getMonth() + 1)); }} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666', padding: '4px 10px', borderRadius: 6 }}>›</button>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 2 }}>
+                  {['一','二','三','四','五','六','日'].map(w => (
+                    <div key={w} style={{ textAlign: 'center', fontSize: 12, color: '#999', padding: '4px 0', fontWeight: 500 }}>{w}</div>
+                  ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+                  {getCalendarDays(dataCalMonth.getFullYear(), dataCalMonth.getMonth()).map((cell, idx) => {
+                    const today = new Date();
+                    const isToday = sameDay(cell.date, today);
+                    const isSelected = dataDate && sameDay(cell.date, new Date(dataDate + 'T00:00:00'));
+                    let bg = 'transparent';
+                    let color = cell.current ? '#1d1d1f' : '#c5c5c7';
+                    if (isSelected) { bg = '#0071e3'; color = 'white'; }
+                    return (
+                      <div
+                        key={idx}
+                        onClick={(e) => { e.stopPropagation(); setDataDate(fmtYMD(cell.date.getFullYear(), cell.date.getMonth(), cell.date.getDate())); setShowDataCalendar(false); }}
+                        style={{ textAlign: 'center', padding: '6px 0', fontSize: 13, cursor: 'pointer', borderRadius: 4, background: bg, color, fontWeight: isToday ? 700 : 400, position: 'relative' }}
+                      >
+                        {cell.date.getDate()}
+                        {isToday && !isSelected && (
+                          <div style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: '#0071e3' }} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
           <button onClick={() => loadData(dataTab, dataDate)}
             style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             查询
