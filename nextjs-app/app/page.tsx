@@ -41,6 +41,7 @@ export default function DashboardPage() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedBuyers, setSelectedBuyers] = useState<string[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerMonth, setPickerMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const datePickerRef = useRef<HTMLDivElement>(null);
 
   const [showAvgCol, setShowAvgCol] = useState(() => {
@@ -97,6 +98,34 @@ export default function DashboardPage() {
       return [fmt(s), fmt(today)];
     }
     return null;
+  }
+
+  function sameDay(a: Date, b: Date) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+
+  function fmtYMD(y: number, m: number, d: number) {
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+
+  function getCalendarDays(year: number, month: number) {
+    const first = new Date(year, month, 1);
+    const last = new Date(year, month + 1, 0);
+    const weekday = first.getDay();
+    const offset = weekday === 0 ? 6 : weekday - 1;
+    const days: { date: Date; current: boolean }[] = [];
+    const prevLast = new Date(year, month, 0);
+    for (let i = offset - 1; i >= 0; i--) {
+      days.push({ date: new Date(prevLast.getFullYear(), prevLast.getMonth(), prevLast.getDate() - i), current: false });
+    }
+    for (let i = 1; i <= last.getDate(); i++) {
+      days.push({ date: new Date(year, month, i), current: true });
+    }
+    const need = 42 - days.length;
+    for (let i = 1; i <= need; i++) {
+      days.push({ date: new Date(year, month + 1, i), current: false });
+    }
+    return days;
   }
 
   // Pre-compute display data (must be before any useEffect to avoid TDZ)
@@ -432,31 +461,94 @@ export default function DashboardPage() {
                   <span style={{ fontSize: 14 }}>📅</span>
                 </button>
                 {showDatePicker && (
-                  <div style={{ position: 'absolute', top: 'calc(100% + 10px)', left: 0, zIndex: 100, background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.12)', width: 320, border: '1px solid #f1f5f9' }}>
-                    {/* 快捷选项 */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-                      {['今日', '昨日', '本周', '本月', '上月'].map(p => (
-                        <button key={p} onClick={() => {
-                          const range = getPresetDates(p);
-                          if (range) { setDateFrom(range[0]); setDateTo(range[1]); }
-                        }} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid #e8e8ed', background: '#f5f5f7', fontSize: 12, color: '#515154', cursor: 'pointer', fontWeight: 500 }}>{p}</button>
-                      ))}
-                    </div>
+                  <div style={{ position: 'absolute', top: 'calc(100% + 10px)', left: 0, zIndex: 100, background: 'white', padding: '20px 24px', borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.12)', width: 560, border: '1px solid #f1f5f9', userSelect: 'none' }}>
                     {/* 日期范围显示 */}
-                    <div style={{ textAlign: 'center', marginBottom: 16, padding: '10px 0', background: '#f5f5f7', borderRadius: 10 }}>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f' }}>{dateFrom || '—'} <span style={{ color: '#86868b', fontWeight: 400 }}>~</span> {dateTo || '—'}</div>
+                    <div style={{ textAlign: 'center', marginBottom: 14, padding: '10px 0', background: '#f5f5f7', borderRadius: 10 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f' }}>{dateFrom || '开始日期'} <span style={{ color: '#86868b', fontWeight: 400 }}>~</span> {dateTo || '结束日期'}</div>
                     </div>
-                    {/* 日期输入 */}
-                    <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 11, color: '#86868b', marginBottom: 4, fontWeight: 600 }}>开始日期</div>
-                        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ padding: '8px 10px', border: '1px solid #e8e8ed', borderRadius: 10, fontSize: 13, width: '100%', boxSizing: 'border-box', color: '#1d1d1f', fontFamily: 'inherit' }} />
+
+                    {/* 月份导航 */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                      <button onClick={(e) => { e.stopPropagation(); setPickerMonth(new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() - 1)); }} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666', padding: '4px 10px', borderRadius: 6 }}>‹</button>
+                      <div style={{ display: 'flex', gap: 140, fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>
+                        <span>{pickerMonth.getFullYear()}年{pickerMonth.getMonth() + 1}月</span>
+                        <span>{new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + 1).getFullYear()}年{new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + 1).getMonth() + 1}月</span>
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 11, color: '#86868b', marginBottom: 4, fontWeight: 600 }}>结束日期</div>
-                        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ padding: '8px 10px', border: '1px solid #e8e8ed', borderRadius: 10, fontSize: 13, width: '100%', boxSizing: 'border-box', color: '#1d1d1f', fontFamily: 'inherit' }} />
-                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); setPickerMonth(new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + 1)); }} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666', padding: '4px 10px', borderRadius: 6 }}>›</button>
                     </div>
+
+                    {/* 双月日历 */}
+                    <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                      {[0, 1].map(offset => {
+                        const calMonth = new Date(pickerMonth.getFullYear(), pickerMonth.getMonth() + offset);
+                        const days = getCalendarDays(calMonth.getFullYear(), calMonth.getMonth());
+                        return (
+                          <div key={offset} style={{ flex: 1 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 2 }}>
+                              {['一','二','三','四','五','六','日'].map(w => (
+                                <div key={w} style={{ textAlign: 'center', fontSize: 12, color: '#999', padding: '4px 0', fontWeight: 500 }}>{w}</div>
+                              ))}
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+                              {days.map((cell, idx) => {
+                                const today = new Date();
+                                const isToday = sameDay(cell.date, today);
+                                const fromDate = dateFrom ? new Date(dateFrom + 'T00:00:00') : null;
+                                const toDate = dateTo ? new Date(dateTo + 'T00:00:00') : null;
+                                const isStart = fromDate && sameDay(cell.date, fromDate);
+                                const isEnd = toDate && sameDay(cell.date, toDate);
+                                const isRange = fromDate && toDate && cell.date > new Date(Math.min(fromDate.getTime(), toDate.getTime())) && cell.date < new Date(Math.max(fromDate.getTime(), toDate.getTime()));
+
+                                let bg = 'transparent';
+                                let color = cell.current ? '#1d1d1f' : '#c5c5c7';
+                                if (isStart || isEnd) { bg = '#0071e3'; color = 'white'; }
+                                else if (isRange) { bg = '#e6f0ff'; color = '#0071e3'; }
+
+                                return (
+                                  <div
+                                    key={idx}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const clicked = new Date(cell.date.getFullYear(), cell.date.getMonth(), cell.date.getDate());
+                                      const from = dateFrom ? new Date(dateFrom + 'T00:00:00') : null;
+                                      const to = dateTo ? new Date(dateTo + 'T00:00:00') : null;
+                                      if (!from || (from && to)) {
+                                        setDateFrom(fmtYMD(cell.date.getFullYear(), cell.date.getMonth(), cell.date.getDate()));
+                                        setDateTo('');
+                                      } else {
+                                        if (clicked.getTime() < from.getTime()) {
+                                          setDateTo(dateFrom);
+                                          setDateFrom(fmtYMD(cell.date.getFullYear(), cell.date.getMonth(), cell.date.getDate()));
+                                        } else {
+                                          setDateTo(fmtYMD(cell.date.getFullYear(), cell.date.getMonth(), cell.date.getDate()));
+                                        }
+                                      }
+                                    }}
+                                    style={{
+                                      textAlign: 'center',
+                                      padding: '5px 0',
+                                      fontSize: 13,
+                                      cursor: 'pointer',
+                                      borderRadius: 4,
+                                      background: bg,
+                                      color,
+                                      fontWeight: isToday ? 700 : 400,
+                                      position: 'relative',
+                                    }}
+                                  >
+                                    {cell.date.getDate()}
+                                    {isToday && !isStart && !isEnd && (
+                                      <div style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: '#0071e3' }} />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
                     <button onClick={() => setShowDatePicker(false)} style={{ width: '100%', padding: '10px', background: '#0071e3', color: 'white', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>确定</button>
                   </div>
                 )}
