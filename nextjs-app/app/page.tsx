@@ -91,6 +91,11 @@ export default function DashboardPage() {
       const e = new Date(y, m, 0); // last day of prev month
       return [fmt(s), fmt(e)];
     }
+    if (preset === '本周') {
+      const day = today.getDay() || 7; // 1=Mon...7=Sun
+      const s = new Date(y, m, d - day + 1);
+      return [fmt(s), fmt(today)];
+    }
     return null;
   }
 
@@ -422,21 +427,37 @@ export default function DashboardPage() {
             })}
             {datePreset === '自定义' && (
               <div ref={datePickerRef} style={{ position: 'relative', marginLeft: 8 }}>
-                <button onClick={() => setShowDatePicker(!showDatePicker)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 13, background: 'white', cursor: 'pointer' }}>
-                  <span style={{ color: '#374151' }}>{dateFrom ? dateFrom.replace(/-/g, '/') : '开始日期'} ~ {dateTo ? dateTo.replace(/-/g, '/') : '结束日期'}</span>
+                <button onClick={() => setShowDatePicker(!showDatePicker)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1px solid #e8e8ed', borderRadius: 10, fontSize: 13, background: 'white', cursor: 'pointer', fontWeight: 500 }}>
+                  <span style={{ color: '#1d1d1f' }}>{dateFrom ? dateFrom.replace(/-/g, '/') : '开始'} ~ {dateTo ? dateTo.replace(/-/g, '/') : '结束'}</span>
                   <span style={{ fontSize: 14 }}>📅</span>
                 </button>
                 {showDatePicker && (
-                  <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 100, background: 'white', padding: 16, borderRadius: 12, boxShadow: '0 10px 40px rgba(0,0,0,0.15)', width: 260 }}>
-                    <div style={{ marginBottom: 14 }}>
-                      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6, fontWeight: 600 }}>开始日期</div>
-                      <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, width: '100%', boxSizing: 'border-box' }} />
+                  <div style={{ position: 'absolute', top: 'calc(100% + 10px)', left: 0, zIndex: 100, background: 'white', padding: 20, borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.12)', width: 320, border: '1px solid #f1f5f9' }}>
+                    {/* 快捷选项 */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                      {['今日', '昨日', '本周', '本月', '上月'].map(p => (
+                        <button key={p} onClick={() => {
+                          const range = getPresetDates(p);
+                          if (range) { setDateFrom(range[0]); setDateTo(range[1]); }
+                        }} style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid #e8e8ed', background: '#f5f5f7', fontSize: 12, color: '#515154', cursor: 'pointer', fontWeight: 500 }}>{p}</button>
+                      ))}
                     </div>
-                    <div style={{ marginBottom: 14 }}>
-                      <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6, fontWeight: 600 }}>结束日期</div>
-                      <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, width: '100%', boxSizing: 'border-box' }} />
+                    {/* 日期范围显示 */}
+                    <div style={{ textAlign: 'center', marginBottom: 16, padding: '10px 0', background: '#f5f5f7', borderRadius: 10 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f' }}>{dateFrom || '—'} <span style={{ color: '#86868b', fontWeight: 400 }}>~</span> {dateTo || '—'}</div>
                     </div>
-                    <button onClick={() => setShowDatePicker(false)} style={{ width: '100%', padding: '8px', background: '#0f172a', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>确定</button>
+                    {/* 日期输入 */}
+                    <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: '#86868b', marginBottom: 4, fontWeight: 600 }}>开始日期</div>
+                        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ padding: '8px 10px', border: '1px solid #e8e8ed', borderRadius: 10, fontSize: 13, width: '100%', boxSizing: 'border-box', color: '#1d1d1f', fontFamily: 'inherit' }} />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 11, color: '#86868b', marginBottom: 4, fontWeight: 600 }}>结束日期</div>
+                        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ padding: '8px 10px', border: '1px solid #e8e8ed', borderRadius: 10, fontSize: 13, width: '100%', boxSizing: 'border-box', color: '#1d1d1f', fontFamily: 'inherit' }} />
+                      </div>
+                    </div>
+                    <button onClick={() => setShowDatePicker(false)} style={{ width: '100%', padding: '10px', background: '#0071e3', color: 'white', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>确定</button>
                   </div>
                 )}
               </div>
