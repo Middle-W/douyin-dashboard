@@ -270,9 +270,17 @@ export default function AdminPage() {
             <h1 style={{ fontSize: 24, margin: '0 0 4px', fontWeight: 700, letterSpacing: '-0.02em' }}>账号管理后台</h1>
             <div style={{ fontSize: 13, color: '#86868b' }}>共 {accounts.length} 个账号 | {fields.length} 个字段</div>
           </div>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <button onClick={() => document.getElementById('data-manager')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '8px 16px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>📊 数据管理</button>
-            <a href="/" style={{ color: '#0071e3', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}>← 返回看板</a>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button onClick={() => document.getElementById('data-manager')?.scrollIntoView({ behavior: 'smooth' })}
+              style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid #0071e3', background: 'white', color: '#0071e3', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
+              onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = '#0071e3'; (e.target as HTMLButtonElement).style.color = 'white'; }}
+              onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = 'white'; (e.target as HTMLButtonElement).style.color = '#0071e3'; }}
+            >📊 数据管理</button>
+            <a href="/"
+              style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid #0071e3', background: 'white', color: '#0071e3', fontSize: 13, fontWeight: 600, cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s', display: 'inline-block' }}
+              onMouseEnter={e => { (e.target as HTMLAnchorElement).style.background = '#0071e3'; (e.target as HTMLAnchorElement).style.color = 'white'; }}
+              onMouseLeave={e => { (e.target as HTMLAnchorElement).style.background = 'white'; (e.target as HTMLAnchorElement).style.color = '#0071e3'; }}
+            >← 返回看板</a>
           </div>
         </div>
       </div>
