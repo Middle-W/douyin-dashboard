@@ -148,8 +148,8 @@ export default function DashboardPage() {
       .filter((f: any) => allAccounts.some((a: any) => !!a[f.dataKey]));
   }, [data, allAccounts]);
 
-  const primaryFilters = allFilterFields.slice(0, 3);
-  const moreFilters = allFilterFields.slice(3);
+  const primaryFilters = allFilterFields.slice(0, 2);
+  const moreFilters = allFilterFields.slice(2);
 
   // Effective date range
   const effectiveDateRange = (() => {
@@ -596,59 +596,64 @@ export default function DashboardPage() {
             );
           })}
 
-          {/* More Filters */}
-          {moreFilters.length > 0 && (
-            <div style={{ marginBottom: 14 }}>
-              <button onClick={() => setShowMoreFilters(!showMoreFilters)}
-                style={{ padding: '6px 14px', borderRadius: 10, border: '1px solid #e8e8ed', background: showMoreFilters ? '#f0fdfa' : '#ffffff', color: '#0f766e', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                {showMoreFilters ? '收起筛选' : '更多筛选'} {showMoreFilters ? '▲' : '▼'}
-              </button>
-              {showMoreFilters && (
-                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {moreFilters.map(({ label, dataKey }: { label: string; dataKey: string }) => {
-                    const options: string[] = Array.from(new Set<string>(allAccounts.map((a: any) => String(a[dataKey] || '')))).filter(v => !!v).sort();
-                    if (options.length === 0) return null;
-                    const selected = dashFilters[dataKey] || [];
-                    return (
-                      <div key={dataKey} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600, minWidth: 52 }}>{label}</span>
-                        <button onClick={() => setDashFilters(prev => ({ ...prev, [dataKey]: [] }))} style={{
+          {/* More filters expand area */}
+          {showMoreFilters && moreFilters.length > 0 && (
+            <div style={{ marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {moreFilters.map(({ label, dataKey }: { label: string; dataKey: string }) => {
+                const options: string[] = Array.from(new Set<string>(allAccounts.map((a: any) => String(a[dataKey] || '')))).filter(v => !!v).sort();
+                if (options.length === 0) return null;
+                const selected = dashFilters[dataKey] || [];
+                return (
+                  <div key={dataKey} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600, minWidth: 52 }}>{label}</span>
+                    <button onClick={() => setDashFilters(prev => ({ ...prev, [dataKey]: [] }))} style={{
+                      padding: '6px 12px', borderRadius: 10, fontSize: 13, border: '1px solid #e8e8ed', cursor: 'pointer',
+                      background: selected.length === 0 ? '#0071e3' : '#f5f5f7',
+                      color: selected.length === 0 ? 'white' : '#515154',
+                      fontWeight: selected.length === 0 ? 600 : 400,
+                    }}>全部</button>
+                    {options.map(v => {
+                      const isActive = selected.includes(v);
+                      return (
+                        <button key={v} onClick={() => setDashFilters(prev => ({ ...prev, [dataKey]: isActive ? (prev[dataKey] || []).filter(x => x !== v) : [...(prev[dataKey] || []), v] }))} style={{
                           padding: '6px 12px', borderRadius: 10, fontSize: 13, border: '1px solid #e8e8ed', cursor: 'pointer',
-                          background: selected.length === 0 ? '#0071e3' : '#f5f5f7',
-                          color: selected.length === 0 ? 'white' : '#515154',
-                          fontWeight: selected.length === 0 ? 600 : 400,
-                        }}>全部</button>
-                        {options.map(v => {
-                          const isActive = selected.includes(v);
-                          return (
-                            <button key={v} onClick={() => setDashFilters(prev => ({ ...prev, [dataKey]: isActive ? (prev[dataKey] || []).filter(x => x !== v) : [...(prev[dataKey] || []), v] }))} style={{
-                              padding: '6px 12px', borderRadius: 10, fontSize: 13, border: '1px solid #e8e8ed', cursor: 'pointer',
-                              background: isActive ? '#0071e3' : '#ffffff',
-                              color: isActive ? 'white' : '#515154',
-                              fontWeight: isActive ? 600 : 400,
-                              transition: 'all 0.15s'
-                            }}>{v}</button>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                          background: isActive ? '#0071e3' : '#ffffff',
+                          color: isActive ? 'white' : '#515154',
+                          fontWeight: isActive ? 600 : 400,
+                          transition: 'all 0.15s'
+                        }}>{v}</button>
+                      );
+                    })}
+                  </div>
+                );
+              })}
             </div>
           )}
 
-          {/* Active filter tags */}
-          {activeFilters.length > 0 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
-              <span style={{ fontSize: 12, color: '#94a3b8' }}>已选:</span>
-              {activeFilters.map(tag => (
-                <span key={tag.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', background: '#f0fdfa', border: '1px solid #ccfbf1', borderRadius: 6, fontSize: 12, color: '#0f766e' }}>
-                  {tag.label}
-                  <button onClick={tag.onRemove} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 14, lineHeight: 1, color: '#0d9488', padding: 0 }}>×</button>
-                </span>
-              ))}
-              <button onClick={() => { setDatePreset('近7天'); setDateFrom(''); setDateTo(''); setDashFilters({}); }} style={{ marginLeft: 'auto', padding: '4px 12px', fontSize: 12, border: 'none', background: '#f1f5f9', borderRadius: 6, cursor: 'pointer', color: '#64748b' }}>清除全部</button>
+          {/* Bottom bar: More Filters button + Active filter tags on same row */}
+          {(moreFilters.length > 0 || activeFilters.length > 0) && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
+              {/* Left: More Filters button */}
+              {moreFilters.length > 0 && (
+                <button onClick={() => setShowMoreFilters(!showMoreFilters)}
+                  style={{ padding: '6px 14px', borderRadius: 10, border: '1px solid #e8e8ed', background: showMoreFilters ? '#f0fdfa' : '#ffffff', color: '#0f766e', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  {showMoreFilters ? '收起筛选' : '更多筛选'} {showMoreFilters ? '▲' : '▼'}
+                </button>
+              )}
+
+              {/* Right: Active filter tags */}
+              {activeFilters.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 12, color: '#94a3b8' }}>已选:</span>
+                  {activeFilters.map(tag => (
+                    <span key={tag.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', background: '#f0fdfa', border: '1px solid #ccfbf1', borderRadius: 6, fontSize: 12, color: '#0f766e' }}>
+                      {tag.label}
+                      <button onClick={tag.onRemove} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 14, lineHeight: 1, color: '#0d9488', padding: 0 }}>×</button>
+                    </span>
+                  ))}
+                  <button onClick={() => { setDatePreset('近7天'); setDateFrom(''); setDateTo(''); setDashFilters({}); setShowMoreFilters(false); }} style={{ padding: '4px 12px', fontSize: 12, border: 'none', background: '#f1f5f9', borderRadius: 6, cursor: 'pointer', color: '#64748b' }}>清除全部</button>
+                </div>
+              )}
             </div>
           )}
           </div>
