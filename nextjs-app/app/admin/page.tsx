@@ -49,6 +49,7 @@ export default function AdminPage() {
   const [message, setMessage] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(new Set());
 
   // Field manager state
   const [newFieldKey, setNewFieldKey] = useState('');
@@ -202,6 +203,23 @@ export default function AdminPage() {
       setMessage('删除成功');
       loadAccounts();
     } catch (e: any) { setMessage(e.message); }
+  };
+
+  const batchRemoveAccounts = async () => {
+    if (selectedAccounts.size === 0) { setMessage('请先选择要删除的账号'); return; }
+    if (!confirm(`确定删除选中的 ${selectedAccounts.size} 个账号？`)) return;
+    let success = 0, fail = 0;
+    for (const name of selectedAccounts) {
+      try {
+        const res = await fetch('/api/accounts/' + encodeURIComponent(name), { method: 'DELETE' });
+        const json = await res.json();
+        if (json.error) { fail++; continue; }
+        success++;
+      } catch { fail++; }
+    }
+    setMessage(`删除完成：成功 ${success} 条${fail > 0 ? `，失败 ${fail} 条` : ''}`);
+    setSelectedAccounts(new Set());
+    loadAccounts();
   };
 
   const getLabel = (key: string) => fields.find(f => f.key === key)?.label || key;
@@ -395,6 +413,12 @@ export default function AdminPage() {
         {/* Account Toolbar */}
         <div style={{ background: 'white', borderRadius: 20, padding: 20, marginBottom: 20, boxShadow: '0 4px 24px rgba(0,0,0,0.04)', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <input type="text" placeholder="搜索账号..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 200, padding: '10px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 14, background: '#f5f5f7' }} />
+          {selectedAccounts.size > 0 && (
+            <button onClick={batchRemoveAccounts}
+              style={{ padding: '10px 18px', borderRadius: 10, border: '1px solid #fecaca', background: '#fef2f2', color: '#ff3b30', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              批量删除 ({selectedAccounts.size})
+            </button>
+          )}
           <button onClick={() => { setEditingAccount(null); setModalOpen(true); }} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>+ 新增账号</button>
         </div>
 
@@ -404,6 +428,27 @@ export default function AdminPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 600 }}>
               <thead>
                 <tr style={{ background: '#f5f5f7' }}>
+                  <th style={{ padding: '12px 8px', textAlign: 'center', fontWeight: 600, color: '#475569', borderBottom: '1px solid #e2e8f0', width: 40 }}>
+                    <input type="checkbox"
+                      checked={filtered.length > 0 && filtered.every((a: any) => selectedAccounts.has(String(a.name)))}
+                      onChange={e => {
+                        if (e.target.checked) {
+                          setSelectedAccounts(prev => {
+                            const next = new Set(prev);
+                            filtered.forEach((a: any) => next.add(String(a.name)));
+                            return next;
+                          });
+                        } else {
+                          setSelectedAccounts(prev => {
+                            const next = new Set(prev);
+                            filtered.forEach((a: any) => next.delete(String(a.name)));
+                            return next;
+                          });
+                        }
+                      }}
+                      style={{ cursor: 'pointer', width: 16, height: 16 }}
+                    />
+                  </th>
                   {adminFields.map(f => (
                     <th key={f.key} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#475569', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>{f.label}</th>
                   ))}
@@ -413,6 +458,21 @@ export default function AdminPage() {
               <tbody>
                 {filtered.map(acc => (
                   <tr key={acc.name} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                      <input type="checkbox"
+                        checked={selectedAccounts.has(String(acc.name))}
+                        onChange={e => {
+                          const name = String(acc.name);
+                          setSelectedAccounts(prev => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(name);
+                            else next.delete(name);
+                            return next;
+                          });
+                        }}
+                        style={{ cursor: 'pointer', width: 16, height: 16 }}
+                      />
+                    </td>
                     {adminFields.map(f => (
                       <td key={f.key} style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
                         {f.key === 'account_type'
