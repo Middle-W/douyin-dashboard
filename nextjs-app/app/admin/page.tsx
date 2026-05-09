@@ -50,6 +50,9 @@ export default function AdminPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [selectedAccounts, setSelectedAccounts] = useState<Set<string>>(new Set());
+  const [batchEditOpen, setBatchEditOpen] = useState(false);
+  const [batchEditField, setBatchEditField] = useState('');
+  const [batchEditValue, setBatchEditValue] = useState('');
 
   // Field manager state
   const [newFieldKey, setNewFieldKey] = useState('');
@@ -218,6 +221,35 @@ export default function AdminPage() {
       } catch { fail++; }
     }
     setMessage(`删除完成：成功 ${success} 条${fail > 0 ? `，失败 ${fail} 条` : ''}`);
+    setSelectedAccounts(new Set());
+    loadAccounts();
+  };
+
+  const batchUpdateAccounts = async () => {
+    if (selectedAccounts.size === 0) { setMessage('请先选择要编辑的账号'); return; }
+    if (!batchEditField) { setMessage('请选择要修改的字段'); return; }
+    let success = 0, fail = 0;
+    for (const name of selectedAccounts) {
+      try {
+        const acc = accounts.find((a: any) => String(a.name) === name);
+        if (!acc) { fail++; continue; }
+        const updateData: Record<string, string> = {};
+        // Copy all existing fields
+        Object.keys(acc).forEach(k => { updateData[k] = String(acc[k] || ''); });
+        // Override the batch field
+        updateData[batchEditField] = batchEditValue;
+        const res = await fetch('/api/accounts/' + encodeURIComponent(name), {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updateData)
+        });
+        const json = await res.json();
+        if (json.error) { fail++; continue; }
+        success++;
+      } catch { fail++; }
+    }
+    setMessage(`批量更新完成：成功 ${success} 条${fail > 0 ? `，失败 ${fail} 条` : ''}`);
+    setBatchEditOpen(false);
+    setBatchEditField('');
+    setBatchEditValue('');
     setSelectedAccounts(new Set());
     loadAccounts();
   };
@@ -411,15 +443,44 @@ export default function AdminPage() {
         )}
 
         {/* Account Toolbar */}
-        <div style={{ background: 'white', borderRadius: 20, padding: 20, marginBottom: 20, boxShadow: '0 4px 24px rgba(0,0,0,0.04)', display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <input type="text" placeholder="搜索账号..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 200, padding: '10px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 14, background: '#f5f5f7' }} />
-          {selectedAccounts.size > 0 && (
-            <button onClick={batchRemoveAccounts}
-              style={{ padding: '10px 18px', borderRadius: 10, border: '1px solid #fecaca', background: '#fef2f2', color: '#ff3b30', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-              批量删除 ({selectedAccounts.size})
-            </button>
+        <div style={{ background: 'white', borderRadius: 20, padding: 20, marginBottom: 20, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input type="text" placeholder="搜索账号..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 200, padding: '10px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 14, background: '#f5f5f7' }} />
+            {selectedAccounts.size > 0 && (
+              <>
+                <button onClick={() => setBatchEditOpen(!batchEditOpen)}
+                  style={{ padding: '10px 18px', borderRadius: 10, border: '1px solid #0071e3', background: 'white', color: '#0071e3', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  批量编辑 ({selectedAccounts.size})
+                </button>
+                <button onClick={batchRemoveAccounts}
+                  style={{ padding: '10px 18px', borderRadius: 10, border: '1px solid #fecaca', background: '#fef2f2', color: '#ff3b30', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  批量删除
+                </button>
+              </>
+            )}
+            <button onClick={() => { setEditingAccount(null); setModalOpen(true); }} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>+ 新增账号</button>
+          </div>
+          {batchEditOpen && selectedAccounts.size > 0 && (
+            <div style={{ marginTop: 14, padding: 14, background: '#f5f5f7', borderRadius: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+              <select value={batchEditField} onChange={e => setBatchEditField(e.target.value)}
+                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e8e8ed', fontSize: 13, minWidth: 120 }}>
+                <option value="">选择字段...</option>
+                {fields.filter(f => !f.is_system && f.key !== 'name').map(f => (
+                  <option key={f.key} value={f.key}>{f.label}</option>
+                ))}
+              </select>
+              <input type="text" value={batchEditValue} onChange={e => setBatchEditValue(e.target.value)}
+                placeholder="新值" style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e8e8ed', fontSize: 13, minWidth: 140 }} />
+              <button onClick={batchUpdateAccounts}
+                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#0071e3', color: 'white', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                确认更新
+              </button>
+              <button onClick={() => { setBatchEditOpen(false); setBatchEditField(''); setBatchEditValue(''); }}
+                style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #e8e8ed', background: 'white', color: '#515154', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                取消
+              </button>
+            </div>
           )}
-          <button onClick={() => { setEditingAccount(null); setModalOpen(true); }} style={{ padding: '10px 18px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>+ 新增账号</button>
         </div>
 
         {loading ? <div style={{ textAlign: 'center', padding: 40 }}>加载中...</div> :
