@@ -1,0 +1,11 @@
+{
+  "name": "douyin-dashboard-scripts",
+  "version": "1.0.0",
+  "description": "抖老板/抖川自动化数据抓取脚本",
+  "scripts": {
+    "douboss": "node fetch-douboss.js"
+  },
+  "dependencies": {
+    "playwright": "^1.43.0"
+  }
+}
