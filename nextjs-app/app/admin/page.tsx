@@ -465,7 +465,7 @@ export default function AdminPage() {
               <select value={batchEditField} onChange={e => setBatchEditField(e.target.value)}
                 style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e8e8ed', fontSize: 13, minWidth: 120 }}>
                 <option value="">选择字段...</option>
-                {fields.filter(f => !f.is_system && f.key !== 'name').map(f => (
+                {fields.filter(f => !['name','id','created_at'].includes(f.key)).map(f => (
                   <option key={f.key} value={f.key}>{f.label}</option>
                 ))}
               </select>
