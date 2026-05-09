@@ -419,7 +419,13 @@ export default function AdminPage() {
         )}
         {/* Data Manager */}
         <div id="data-manager" style={{ background: 'white', borderRadius: 20, padding: 24, marginTop: 24, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
-        <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 16px', color: '#1d1d1f' }}>📊 数据管理</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#1d1d1f' }}>📊 数据管理</h2>
+          <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #e8e8ed', background: '#f5f5f7', color: '#515154', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            ↑ 返回顶部
+          </button>
+        </div>
 
         {/* Tab Switch */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
