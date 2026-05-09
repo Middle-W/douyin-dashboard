@@ -214,7 +214,21 @@ export default function AdminPage() {
       const res = await fetch(`${api}?date=${date}&t=${Date.now()}`, { cache: 'no-store' });
       const json = await res.json();
       if (json.error) throw new Error(json.error);
-      setDataList(tab === 'stats' ? json.stats : json.costs);
+      const raw = tab === 'stats' ? json.stats : json.costs;
+      // Sort by account code to match account list order
+      const sorted = [...raw].sort((a: any, b: any) => {
+        const getCode = (name: string) => {
+          const acc = accounts.find((ac: any) => String(ac.name || '') === name);
+          return String(acc?.code || '').trim();
+        };
+        const ca = getCode(a.account_name);
+        const cb = getCode(b.account_name);
+        if (!ca && !cb) return String(a.account_name).localeCompare(String(b.account_name), 'zh-CN');
+        if (!ca) return 1;
+        if (!cb) return -1;
+        return ca.localeCompare(cb, 'zh-CN');
+      });
+      setDataList(sorted);
     } catch (e: any) { setDataMsg(e.message); }
     finally { setDataLoading(false); }
   };
