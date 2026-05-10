@@ -890,30 +890,36 @@ export default function DashboardPage() {
               </div>
               {showDailyReport && (
                 <div style={{ padding: '20px 28px' }}>
-                  {/* 左列：总体指标 + Top 3 | 右列：异常预警 */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '260px auto', gap: 24, alignItems: 'start' }}>
-                    {/* 左侧 */}
+                  {/* 左列：净佣金排行 | 中列：利润排行 | 右列：异常预警 */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 24, alignItems: 'start' }}>
+                    {/* 左侧：净佣金排行 */}
                     <div>
-                      {/* 总体指标 */}
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 16px', marginBottom: 16 }}>
-                        <div><div style={{ fontSize: 11, color: '#a1a1a6' }}>单量</div><div style={{ fontSize: 16, fontWeight: 700, color: '#0071e3' }}>{totalOrders.toLocaleString()}</div></div>
-                        <div><div style={{ fontSize: 11, color: '#a1a1a6' }}>净佣金</div><div style={{ fontSize: 16, fontWeight: 700, color: '#af52de' }}>¥{Math.round(totalNetIncome).toLocaleString()}</div></div>
-                        <div><div style={{ fontSize: 11, color: '#a1a1a6' }}>消耗</div><div style={{ fontSize: 16, fontWeight: 700, color: '#ff9500' }}>¥{Math.round(totalCost).toLocaleString()}</div></div>
-                        <div><div style={{ fontSize: 11, color: '#a1a1a6' }}>利润</div><div style={{ fontSize: 16, fontWeight: 700, color: totalProfit >= 0 ? '#34c759' : '#ff3b30' }}>¥{Math.round(totalProfit).toLocaleString()}</div></div>
-                        <div><div style={{ fontSize: 11, color: '#a1a1a6' }}>投产比</div><div style={{ fontSize: 16, fontWeight: 700, color: avgRoi >= 1 ? '#34c759' : '#ff9500' }}>{avgRoi.toFixed(2)}</div></div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        🏆 净佣金排行
                       </div>
-
-                      {/* Top 3 */}
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        🏆 Top 3
-                      </div>
-                      {top3.map((a, i) => (
-                        <div key={a.account} style={{ padding: '8px 0', borderBottom: i < 2 ? '1px solid #f5f5f7' : 'none' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      {[...accountsWithHealth].sort((a: any, b: any) => (b._netIncome || 0) - (a._netIncome || 0)).slice(0, 5).map((a: any, i: number) => (
+                        <div key={a.account} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ width: 18, height: 18, borderRadius: '50%', background: i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : '#cd7f32', color: '#fff', fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
                             <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{a.account}</span>
                           </div>
-                          <div style={{ fontSize: 14, fontWeight: 700, color: '#af52de', paddingLeft: 24 }}>¥{Math.round(a._netIncome || 0).toLocaleString()}</div>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: '#af52de' }}>¥{Math.round(a._netIncome || 0).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* 中列：利润排行 */}
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        📈 利润排行
+                      </div>
+                      {[...accountsWithHealth].sort((a: any, b: any) => (b._profit || 0) - (a._profit || 0)).slice(0, 5).map((a: any, i: number) => (
+                        <div key={a.account} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ width: 18, height: 18, borderRadius: '50%', background: i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : '#cd7f32', color: '#fff', fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{a.account}</span>
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: (a._profit || 0) >= 0 ? '#34c759' : '#ff3b30' }}>¥{Math.round(a._profit || 0).toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
