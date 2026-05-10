@@ -369,11 +369,15 @@ async function pushData(records) {
   log(`📤 推送 ${records.length} 条 → ${CONFIG.apiUrl}`);
   log(`   日期: ${CONFIG.date}, 样本: ${records.slice(0, 3).map(r => r.name).join(', ')}...`);
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
   const res = await fetch(CONFIG.apiUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ date: CONFIG.date, stats: records }),
+    signal: controller.signal,
   });
+  clearTimeout(timeout);
 
   const json = await res.json();
   if (!json.success) {
