@@ -926,7 +926,7 @@ export default function DashboardPage() {
                       {abnormal.length === 0 ? (
                         <div style={{ fontSize: 13, color: '#34c759', padding: '8px 0' }}>✅ 所有账号健康度正常</div>
                       ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, maxWidth: 720 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 128px)', gap: 6 }}>
                           {abnormal.map((a: any) => (
                             <div key={a.account} style={{ background: '#fff8f8', borderRadius: 10, padding: '10px 8px', border: '1px solid #ffe0e0', display: 'flex', flexDirection: 'column', gap: 4, minHeight: 82 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
