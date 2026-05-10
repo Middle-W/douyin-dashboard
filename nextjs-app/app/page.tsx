@@ -509,12 +509,10 @@ export default function DashboardPage() {
   const totalValue = displayAccounts.reduce((s: number, a: any) => s + getDisplayMetricValue(a, activeMetric), 0);
 
   // 为每个账号计算健康度，支持按健康度排序
-  const accountsWithHealth = useMemo(() => {
-    return displayAccounts.map((a: any) => ({
-      ...a,
-      _health: calcHealthScore(a, displayDates),
-    }));
-  }, [displayAccounts, displayDates]);
+  const accountsWithHealth = displayAccounts.map((a: any) => ({
+    ...a,
+    _health: calcHealthScore(a, displayDates),
+  }));
 
   const sortedAccounts = [...accountsWithHealth].sort((a, b) => {
     if (sortKey === 'health') {
