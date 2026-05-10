@@ -926,7 +926,7 @@ export default function DashboardPage() {
                       {abnormal.length === 0 ? (
                         <div style={{ fontSize: 13, color: '#34c759', padding: '8px 0' }}>✅ 所有账号健康度正常</div>
                       ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 6 }}>
                           {abnormal.map((a: any) => (
                             <div key={a.account} style={{ background: '#fff8f8', borderRadius: 10, padding: '12px 10px', border: '1px solid #ffe0e0', display: 'flex', flexDirection: 'column', gap: 5, minHeight: 90 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -937,7 +937,7 @@ export default function DashboardPage() {
                               {a._health?.issues?.length > 0 && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                   {a._health.issues.slice(0, 2).map((issue: string, i: number) => (
-                                    <span key={i} style={{ fontSize: 10, color: '#515154', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{issue}</span>
+                                    <span key={i} style={{ fontSize: 11, color: '#515154', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{issue}</span>
                                   ))}
                                 </div>
                               )}
