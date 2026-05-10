@@ -891,7 +891,7 @@ export default function DashboardPage() {
               {showDailyReport && (
                 <div style={{ padding: '20px 28px' }}>
                   {/* 左列：总体指标 + Top 3 | 右列：异常预警 */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 20, alignItems: 'start' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '260px auto', gap: 24, alignItems: 'start' }}>
                     {/* 左侧 */}
                     <div>
                       {/* 总体指标 */}
@@ -926,9 +926,9 @@ export default function DashboardPage() {
                       {abnormal.length === 0 ? (
                         <div style={{ fontSize: 13, color: '#34c759', padding: '8px 0' }}>✅ 所有账号健康度正常</div>
                       ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 6 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6, maxWidth: 720 }}>
                           {abnormal.map((a: any) => (
-                            <div key={a.account} style={{ background: '#fff8f8', borderRadius: 10, padding: '12px 10px', border: '1px solid #ffe0e0', display: 'flex', flexDirection: 'column', gap: 5, minHeight: 90 }}>
+                            <div key={a.account} style={{ background: '#fff8f8', borderRadius: 10, padding: '10px 8px', border: '1px solid #ffe0e0', display: 'flex', flexDirection: 'column', gap: 4, minHeight: 82 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ff3b30', flexShrink: 0 }} />
                                 <span style={{ fontSize: 12, fontWeight: 600, color: '#1d1d1f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.account}</span>
