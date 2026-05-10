@@ -259,9 +259,16 @@ async function scrapeAllPages(page) {
     await page.waitForTimeout(CONFIG.pageDelay);
   }
 
-  const map = {};
-  results.forEach(r => { map[r.name] = r; });
-  return Object.values(map);
+  // Merge costs by cleaned name (same account may have multiple sub-entries)
+  const merged = {};
+  for (const r of results) {
+    if (merged[r.name]) {
+      merged[r.name].cost += r.cost;
+    } else {
+      merged[r.name] = { ...r };
+    }
+  }
+  return Object.values(merged);
 }
 
 async function waitForTableLoad(page) {
