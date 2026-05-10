@@ -857,7 +857,10 @@ export default function DashboardPage() {
           const totalCost = displayAccounts.reduce((s: number, a: any) => s + (a._cost || 0), 0);
           const totalProfit = displayAccounts.reduce((s: number, a: any) => s + (a._profit || 0), 0);
           const top3 = [...accountsWithHealth].sort((a, b) => (b._netIncome || 0) - (a._netIncome || 0)).slice(0, 3);
-          const abnormal = accountsWithHealth.filter((a: any) => (a._health?.total || 100) < 50).slice(0, 5);
+          const abnormal = accountsWithHealth
+            .filter((a: any) => (a._health?.total || 100) < 50)
+            .sort((a: any, b: any) => (a._health?.total || 100) - (b._health?.total || 100))
+            .slice(0, 10);
           const avgRoi = totalCost > 0 ? totalNetIncome / totalCost : 0;
           let suggestion = '';
           if (totalCost === 0) suggestion = '暂无消耗数据，建议关注账号投放状态。';
@@ -911,50 +914,56 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
-                  {/* Top 3 + 异常 */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        🏆 Top 3 账号（净佣金）
-                      </div>
+                  {/* Top 3 */}
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      🏆 Top 3 账号（净佣金）
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
                       {top3.map((a, i) => (
-                        <div key={a.account} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < 2 ? '1px solid #f5f5f7' : 'none' }}>
+                        <div key={a.account} style={{ background: '#f8f8fa', borderRadius: 12, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ width: 18, height: 18, borderRadius: '50%', background: i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : '#cd7f32', color: '#fff', fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
-                            <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{a.account}</span>
+                            <span style={{ width: 20, height: 20, borderRadius: '50%', background: i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : '#cd7f32', color: '#fff', fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</span>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f' }}>{a.account}</span>
                           </div>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: '#af52de' }}>¥{Math.round(a._netIncome || 0).toLocaleString()}</span>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: '#af52de', paddingLeft: 28 }}>¥{Math.round(a._netIncome || 0).toLocaleString()}</div>
                         </div>
                       ))}
                     </div>
+                  </div>
 
-                    <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        ⚠️ 异常预警 {abnormal.length > 0 && <span style={{ background: '#fff0f0', color: '#ff3b30', fontSize: 11, padding: '1px 6px', borderRadius: 10 }}>{abnormal.length} 个</span>}
-                      </div>
-                      {abnormal.length === 0 ? (
-                        <div style={{ fontSize: 13, color: '#34c759', padding: '8px 0' }}>✅ 所有账号健康度正常</div>
-                      ) : (
-                        abnormal.map((a: any, idx: number) => (
-                          <div key={a.account} style={{ padding: '8px 0', borderBottom: idx < abnormal.length - 1 ? '1px solid #f5f5f7' : 'none' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {/* 异常预警 */}
+                  <div style={{ marginBottom: 4 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      ⚠️ 异常预警 {abnormal.length > 0 && <span style={{ background: '#fff0f0', color: '#ff3b30', fontSize: 11, padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>{abnormal.length} 个</span>}
+                    </div>
+                    {abnormal.length === 0 ? (
+                      <div style={{ fontSize: 13, color: '#34c759', padding: '8px 0' }}>✅ 所有账号健康度正常</div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                        {abnormal.map((a: any) => (
+                          <div key={a.account} style={{ background: '#fff8f8', borderRadius: 12, padding: '12px 16px', border: '1px solid #ffe0e0' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff3b30', display: 'inline-block', flexShrink: 0 }} />
-                                <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{a.account}</span>
+                                <span style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f' }}>{a.account}</span>
                               </div>
-                              <span style={{ fontSize: 12, color: '#ff3b30', fontWeight: 600, flexShrink: 0 }}>{a._health?.total}分</span>
+                              <span style={{ fontSize: 13, color: '#ff3b30', fontWeight: 700 }}>{a._health?.total}分</span>
                             </div>
                             {a._health?.issues?.length > 0 && (
-                              <div style={{ marginTop: 4, paddingLeft: 16, fontSize: 11, color: '#86868b', lineHeight: 1.6 }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingLeft: 16 }}>
                                 {a._health.issues.map((issue: string, i: number) => (
-                                  <span key={i}>· {issue}{i < a._health.issues.length - 1 ? ' · ' : ''}</span>
+                                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                                    <span style={{ color: '#ff3b30', fontSize: 10, marginTop: 3, flexShrink: 0 }}>●</span>
+                                    <span style={{ fontSize: 12, color: '#515154', lineHeight: 1.5 }}>{issue}</span>
+                                  </div>
                                 ))}
                               </div>
                             )}
                           </div>
-                        ))
-                      )}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* 建议 */}
