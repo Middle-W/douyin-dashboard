@@ -890,40 +890,26 @@ export default function DashboardPage() {
               </div>
               {showDailyReport && (
                 <div style={{ padding: '20px 28px' }}>
-                  {/* 总体指标 */}
-                  <div style={{ display: 'flex', gap: 24, marginBottom: 20, flexWrap: 'wrap' }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: '#a1a1a6', marginBottom: 2 }}>单量</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: '#0071e3' }}>{totalOrders.toLocaleString()}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: '#a1a1a6', marginBottom: 2 }}>净佣金</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: '#af52de' }}>¥{Math.round(totalNetIncome).toLocaleString()}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: '#a1a1a6', marginBottom: 2 }}>消耗</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: '#ff9500' }}>¥{Math.round(totalCost).toLocaleString()}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: '#a1a1a6', marginBottom: 2 }}>利润</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: totalProfit >= 0 ? '#34c759' : '#ff3b30' }}>¥{Math.round(totalProfit).toLocaleString()}</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: '#a1a1a6', marginBottom: 2 }}>投产比</div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: avgRoi >= 1 ? '#34c759' : '#ff9500' }}>{avgRoi.toFixed(2)}</div>
-                    </div>
-                  </div>
-
-                  {/* Top 3 + 异常预警 */}
+                  {/* 左列：总体指标 + Top 3 | 右列：异常预警 */}
                   <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 20, alignItems: 'start' }}>
-                    {/* 左侧：Top 3 */}
+                    {/* 左侧 */}
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {/* 总体指标 */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 16px', marginBottom: 16 }}>
+                        <div><div style={{ fontSize: 11, color: '#a1a1a6' }}>单量</div><div style={{ fontSize: 16, fontWeight: 700, color: '#0071e3' }}>{totalOrders.toLocaleString()}</div></div>
+                        <div><div style={{ fontSize: 11, color: '#a1a1a6' }}>净佣金</div><div style={{ fontSize: 16, fontWeight: 700, color: '#af52de' }}>¥{Math.round(totalNetIncome).toLocaleString()}</div></div>
+                        <div><div style={{ fontSize: 11, color: '#a1a1a6' }}>消耗</div><div style={{ fontSize: 16, fontWeight: 700, color: '#ff9500' }}>¥{Math.round(totalCost).toLocaleString()}</div></div>
+                        <div><div style={{ fontSize: 11, color: '#a1a1a6' }}>利润</div><div style={{ fontSize: 16, fontWeight: 700, color: totalProfit >= 0 ? '#34c759' : '#ff3b30' }}>¥{Math.round(totalProfit).toLocaleString()}</div></div>
+                        <div><div style={{ fontSize: 11, color: '#a1a1a6' }}>投产比</div><div style={{ fontSize: 16, fontWeight: 700, color: avgRoi >= 1 ? '#34c759' : '#ff9500' }}>{avgRoi.toFixed(2)}</div></div>
+                      </div>
+
+                      {/* Top 3 */}
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                         🏆 Top 3
                       </div>
                       {top3.map((a, i) => (
-                        <div key={a.account} style={{ padding: '10px 0', borderBottom: i < 2 ? '1px solid #f5f5f7' : 'none' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                        <div key={a.account} style={{ padding: '8px 0', borderBottom: i < 2 ? '1px solid #f5f5f7' : 'none' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                             <span style={{ width: 18, height: 18, borderRadius: '50%', background: i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : '#cd7f32', color: '#fff', fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
                             <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{a.account}</span>
                           </div>
@@ -940,18 +926,20 @@ export default function DashboardPage() {
                       {abnormal.length === 0 ? (
                         <div style={{ fontSize: 13, color: '#34c759', padding: '8px 0' }}>✅ 所有账号健康度正常</div>
                       ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
                           {abnormal.map((a: any) => (
-                            <div key={a.account} style={{ background: '#fff8f8', borderRadius: 10, padding: '10px 12px', border: '1px solid #ffe0e0', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <div key={a.account} style={{ background: '#fff8f8', borderRadius: 10, padding: '12px 10px', border: '1px solid #ffe0e0', display: 'flex', flexDirection: 'column', gap: 5, minHeight: 90 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ff3b30', flexShrink: 0 }} />
                                 <span style={{ fontSize: 12, fontWeight: 600, color: '#1d1d1f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.account}</span>
                               </div>
-                              <span style={{ fontSize: 12, color: '#ff3b30', fontWeight: 700 }}>{a._health?.total}分</span>
+                              <span style={{ fontSize: 13, color: '#ff3b30', fontWeight: 700 }}>{a._health?.total}分</span>
                               {a._health?.issues?.length > 0 && (
-                                <span style={{ fontSize: 10, color: '#515154', lineHeight: 1.4 }}>
-                                  {a._health.issues[0].length > 12 ? a._health.issues[0].slice(0, 12) + '...' : a._health.issues[0]}
-                                </span>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                  {a._health.issues.slice(0, 2).map((issue: string, i: number) => (
+                                    <span key={i} style={{ fontSize: 10, color: '#515154', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{issue}</span>
+                                  ))}
+                                </div>
                               )}
                             </div>
                           ))}
