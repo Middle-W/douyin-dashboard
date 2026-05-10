@@ -50,6 +50,10 @@ export default function DashboardPage() {
     try { return localStorage.getItem('dash_show_avg') !== 'false'; } catch { return true; }
   });
   const [sortDesc, setSortDesc] = useState(true);
+  const [sortKey, setSortKey] = useState<'metric' | 'health'>('metric');
+  const [showDailyReport, setShowDailyReport] = useState(() => {
+    try { return localStorage.getItem('dash_show_report') !== 'false'; } catch { return true; }
+  });
 
   const dashFields = (data?.fields || []).filter((f: any) => f.show_in_dashboard);
 
@@ -410,8 +414,113 @@ export default function DashboardPage() {
     return a._profit || 0;
   };
 
+  function calcHealthScore(account: any, dates: string[]) {
+    const cost = account._cost || 0;
+    const profit = account._profit || 0;
+    const netIncome = account._netIncome || 0;
+    const orders = account._orders || 0;
+    const days = dates.length;
+
+    // 1. 盈利健康 (30%): 利润率 = profit / cost
+    let profitScore = 30;
+    if (cost > 0) {
+      const margin = profit / cost;
+      if (margin >= 0.20) profitScore = 30;
+      else if (margin >= 0.10) profitScore = 25;
+      else if (margin >= 0.05) profitScore = 18;
+      else if (margin >= 0) profitScore = 10;
+      else profitScore = Math.max(0, 10 + margin * 100);
+    } else if (profit > 0) profitScore = 30;
+    else profitScore = 15;
+
+    // 2. 投产健康 (25%): ROI = netIncome / cost
+    let roiScore = 25;
+    if (cost > 0) {
+      const roi = netIncome / cost;
+      if (roi >= 2.0) roiScore = 25;
+      else if (roi >= 1.5) roiScore = 22;
+      else if (roi >= 1.0) roiScore = 18;
+      else if (roi >= 0.5) roiScore = 12;
+      else roiScore = Math.max(0, roi * 24);
+    } else if (netIncome > 0) roiScore = 25;
+    else roiScore = 12;
+
+    // 3. 活跃健康 (20%): 日均单量
+    let activeScore = 20;
+    const avgOrders = days > 0 ? orders / days : 0;
+    if (avgOrders >= 50) activeScore = 20;
+    else if (avgOrders >= 20) activeScore = 17;
+    else if (avgOrders >= 10) activeScore = 14;
+    else if (avgOrders >= 5) activeScore = 10;
+    else if (avgOrders > 0) activeScore = 6;
+    else activeScore = 0;
+
+    // 4. 趋势健康 (15%): 前半段 vs 后半段单量
+    let trendScore = 15;
+    if (dates.length >= 2) {
+      const mid = Math.floor(dates.length / 2);
+      const firstHalf = dates.slice(0, mid);
+      const secondHalf = dates.slice(mid);
+      const firstOrders = firstHalf.reduce((s, d) => s + (account.daily?.[d]?.orders || 0), 0);
+      const secondOrders = secondHalf.reduce((s, d) => s + (account.daily?.[d]?.orders || 0), 0);
+      const avgFirst = firstHalf.length > 0 ? firstOrders / firstHalf.length : 0;
+      const avgSecond = secondHalf.length > 0 ? secondOrders / secondHalf.length : 0;
+      if (avgFirst > 0) {
+        const change = (avgSecond - avgFirst) / avgFirst;
+        if (change >= 0.30) trendScore = 15;
+        else if (change >= 0.10) trendScore = 13;
+        else if (change >= -0.10) trendScore = 11;
+        else if (change >= -0.30) trendScore = 7;
+        else trendScore = Math.max(0, 15 + change * 30);
+      } else if (avgSecond > 0) trendScore = 12;
+    }
+
+    // 5. 消耗稳定 (10%): 消耗变异系数
+    let stabilityScore = 10;
+    if (dates.length >= 2) {
+      const dailyCosts = dates.map(d => account.daily?.[d]?.cost || 0).filter(c => c > 0);
+      if (dailyCosts.length >= 2) {
+        const avg = dailyCosts.reduce((a, b) => a + b, 0) / dailyCosts.length;
+        const variance = dailyCosts.reduce((s, c) => s + Math.pow(c - avg, 2), 0) / dailyCosts.length;
+        const stdDev = Math.sqrt(variance);
+        const cv = avg > 0 ? stdDev / avg : 0;
+        if (cv <= 0.3) stabilityScore = 10;
+        else if (cv <= 0.5) stabilityScore = 8;
+        else if (cv <= 0.8) stabilityScore = 6;
+        else if (cv <= 1.2) stabilityScore = 4;
+        else stabilityScore = 2;
+      }
+    }
+
+    const total = Math.round(profitScore + roiScore + activeScore + trendScore + stabilityScore);
+    return {
+      total,
+      grade: total >= 80 ? 'good' : total >= 50 ? 'warn' : 'bad' as const,
+      details: [
+        { label: '盈利健康', score: Math.round(profitScore), max: 30, status: profitScore >= 24 ? 'ok' : profitScore >= 15 ? 'warn' : 'bad' as const },
+        { label: '投产健康', score: Math.round(roiScore), max: 25, status: roiScore >= 20 ? 'ok' : roiScore >= 12 ? 'warn' : 'bad' as const },
+        { label: '活跃健康', score: Math.round(activeScore), max: 20, status: activeScore >= 16 ? 'ok' : activeScore >= 10 ? 'warn' : 'bad' as const },
+        { label: '趋势健康', score: Math.round(trendScore), max: 15, status: trendScore >= 12 ? 'ok' : trendScore >= 7 ? 'warn' : 'bad' as const },
+        { label: '消耗稳定', score: Math.round(stabilityScore), max: 10, status: stabilityScore >= 8 ? 'ok' : stabilityScore >= 5 ? 'warn' : 'bad' as const },
+      ],
+    };
+  }
+
   const totalValue = displayAccounts.reduce((s: number, a: any) => s + getDisplayMetricValue(a, activeMetric), 0);
-  const sortedAccounts = [...displayAccounts].sort((a, b) => {
+
+  // 为每个账号计算健康度，支持按健康度排序
+  const accountsWithHealth = useMemo(() => {
+    return displayAccounts.map((a: any) => ({
+      ...a,
+      _health: calcHealthScore(a, displayDates),
+    }));
+  }, [displayAccounts, displayDates]);
+
+  const sortedAccounts = [...accountsWithHealth].sort((a, b) => {
+    if (sortKey === 'health') {
+      const diff = (a._health?.total || 0) - (b._health?.total || 0);
+      return sortDesc ? -diff : diff;
+    }
     const diff = getDisplayMetricValue(a, activeMetric) - getDisplayMetricValue(b, activeMetric);
     return sortDesc ? -diff : diff;
   });
@@ -712,6 +821,116 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Daily Report Card */}
+        {/* Daily Report Card */}
+        {(() => {
+          const totalOrders = displayAccounts.reduce((s: number, a: any) => s + (a._orders || 0), 0);
+          const totalNetIncome = displayAccounts.reduce((s: number, a: any) => s + (a._netIncome || 0), 0);
+          const totalCost = displayAccounts.reduce((s: number, a: any) => s + (a._cost || 0), 0);
+          const totalProfit = displayAccounts.reduce((s: number, a: any) => s + (a._profit || 0), 0);
+          const top3 = [...accountsWithHealth].sort((a, b) => (b._netIncome || 0) - (a._netIncome || 0)).slice(0, 3);
+          const abnormal = accountsWithHealth.filter((a: any) => (a._health?.total || 100) < 50).slice(0, 5);
+          const avgRoi = totalCost > 0 ? totalNetIncome / totalCost : 0;
+          let suggestion = '';
+          if (totalCost === 0) suggestion = '暂无消耗数据，建议关注账号投放状态。';
+          else if (avgRoi < 0.8) suggestion = '整体投产偏低，建议优化高消耗低产出账号的投放策略。';
+          else if (totalProfit < 0) suggestion = '整体利润为负，建议控制消耗或提升转化率。';
+          else if (abnormal.length > 0) suggestion = `有 ${abnormal.length} 个账号健康度偏低，建议重点关注。`;
+          else suggestion = '整体数据健康，保持现有投放节奏。';
+
+          return (
+            <div style={{ background: '#ffffff', borderRadius: 20, boxShadow: '0 4px 24px rgba(0,0,0,0.04)', marginBottom: 24, overflow: 'hidden' }}>
+              <div style={{ padding: '20px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: showDailyReport ? '1px solid #f0f0f0' : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 4, height: 20, borderRadius: 2, background: '#0071e3' }} />
+                  <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f' }}>
+                    📋 {displayDates[0] || ''} 至 {displayDates[displayDates.length - 1] || ''} 数据日报
+                  </span>
+                  <span style={{ fontSize: 12, color: '#a1a1a6', background: '#f5f5f7', padding: '2px 8px', borderRadius: 6 }}>
+                    {displayAccounts.length} 个账号
+                  </span>
+                </div>
+                <button
+                  onClick={() => { setShowDailyReport(v => { const n = !v; try { localStorage.setItem('dash_show_report', String(n)); } catch {} return n; }); }}
+                  style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#86868b', display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  {showDailyReport ? '收起 ▲' : '展开 ▼'}
+                </button>
+              </div>
+              {showDailyReport && (
+                <div style={{ padding: '20px 28px' }}>
+                  {/* 总体指标 */}
+                  <div style={{ display: 'flex', gap: 24, marginBottom: 20, flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: '#a1a1a6', marginBottom: 2 }}>单量</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: '#0071e3' }}>{totalOrders.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: '#a1a1a6', marginBottom: 2 }}>净佣金</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: '#af52de' }}>¥{Math.round(totalNetIncome).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: '#a1a1a6', marginBottom: 2 }}>消耗</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: '#ff9500' }}>¥{Math.round(totalCost).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: '#a1a1a6', marginBottom: 2 }}>利润</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: totalProfit >= 0 ? '#34c759' : '#ff3b30' }}>¥{Math.round(totalProfit).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: '#a1a1a6', marginBottom: 2 }}>投产比</div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: avgRoi >= 1 ? '#34c759' : '#ff9500' }}>{avgRoi.toFixed(2)}</div>
+                    </div>
+                  </div>
+
+                  {/* Top 3 + 异常 */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        🏆 Top 3 账号（净佣金）
+                      </div>
+                      {top3.map((a, i) => (
+                        <div key={a.account} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < 2 ? '1px solid #f5f5f7' : 'none' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ width: 18, height: 18, borderRadius: '50%', background: i === 0 ? '#ffd700' : i === 1 ? '#c0c0c0' : '#cd7f32', color: '#fff', fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{i + 1}</span>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{a.account}</span>
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: '#af52de' }}>¥{Math.round(a._netIncome || 0).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        ⚠️ 异常预警 {abnormal.length > 0 && <span style={{ background: '#fff0f0', color: '#ff3b30', fontSize: 11, padding: '1px 6px', borderRadius: 10 }}>{abnormal.length} 个</span>}
+                      </div>
+                      {abnormal.length === 0 ? (
+                        <div style={{ fontSize: 13, color: '#34c759', padding: '8px 0' }}>✅ 所有账号健康度正常</div>
+                      ) : (
+                        abnormal.map((a: any) => (
+                          <div key={a.account} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f5f5f7' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff3b30', display: 'inline-block' }} />
+                              <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{a.account}</span>
+                            </div>
+                            <span style={{ fontSize: 12, color: '#ff3b30', fontWeight: 600 }}>{a._health?.total}分</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 建议 */}
+                  <div style={{ marginTop: 16, padding: '12px 16px', background: '#f0f5ff', borderRadius: 12, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>💡</span>
+                    <span style={{ fontSize: 13, color: '#1d1d1f', fontWeight: 500, lineHeight: 1.5 }}>{suggestion}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
         {/* Charts Row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: 24, marginBottom: 28 }}>
           <div style={{ background: '#ffffff', padding: 28, borderRadius: 20, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
@@ -741,12 +960,18 @@ export default function DashboardPage() {
               <thead>
                 <tr style={{ background: '#f5f5f7' }}>
                   <th
-                    onClick={() => setSortDesc(v => !v)}
+                    onClick={() => { setSortKey('metric'); setSortDesc(v => !v); }}
                     style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#86868b', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none', borderBottom: 'none' }}
                   >
-                    排名 {sortDesc ? '↓' : '↑'}
+                    排名 {sortKey === 'metric' ? (sortDesc ? '↓' : '↑') : ''}
                   </th>
-                  <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#86868b', whiteSpace: 'nowrap', borderBottom: 'none' }}>账号</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: 11, fontWeight: 600, color: '#86868b', whiteSpace: 'nowrap', borderBottom: 'none', width: 100 }}>账号</th>
+                  <th
+                    onClick={() => { setSortKey('health'); setSortDesc(v => !v); }}
+                    style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#86868b', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none', borderBottom: 'none' }}
+                  >
+                    健康度 {sortKey === 'health' ? (sortDesc ? '↓' : '↑') : ''}
+                  </th>
                   {dashFields.map((f: any) => (
                     <th key={f.key} style={{ padding: '10px 8px', textAlign: 'center', fontSize: 11, fontWeight: 600, color: '#86868b', whiteSpace: 'nowrap', borderBottom: 'none' }}>{f.label}</th>
                   ))}
@@ -767,7 +992,43 @@ export default function DashboardPage() {
                   return (
                     <tr key={a.account} style={{ background: i % 2 === 1 ? '#fafafa' : '#ffffff', transition: 'background 0.12s' }} onMouseEnter={e => (e.currentTarget.style.background = '#f5f5f7')} onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 1 ? '#fafafa' : '#ffffff')}>
                       <td style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', fontWeight: 600, color: '#86868b', fontSize: 12 }}>{i + 1}</td>
-                      <td style={{ padding: '10px 8px', borderBottom: '1px solid #f0f0f0', fontWeight: 600, color: '#1d1d1f' }}>{a.account}</td>
+                      <td style={{ padding: '10px 8px', borderBottom: '1px solid #f0f0f0', fontWeight: 600, color: '#1d1d1f', width: 100 }}>{a.account}</td>
+                      <td style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', position: 'relative' }}>
+                        <div
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'help' }}
+                          onMouseEnter={e => {
+                            const tooltip = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (tooltip) tooltip.style.display = 'block';
+                          }}
+                          onMouseLeave={e => {
+                            const tooltip = e.currentTarget.nextElementSibling as HTMLElement;
+                            if (tooltip) tooltip.style.display = 'none';
+                          }}
+                        >
+                          <span style={{
+                            width: 8, height: 8, borderRadius: '50%', display: 'inline-block',
+                            background: a._health?.grade === 'good' ? '#34c759' : a._health?.grade === 'warn' ? '#ff9500' : '#ff3b30'
+                          }} />
+                          <span style={{ fontSize: 12, fontWeight: 600, color: a._health?.grade === 'good' ? '#34c759' : a._health?.grade === 'warn' ? '#ff9500' : '#ff3b30' }}>
+                            {a._health?.total ?? '-'}
+                          </span>
+                        </div>
+                        <div style={{
+                          display: 'none', position: 'absolute', zIndex: 100, left: '50%', transform: 'translateX(-50%)', top: '100%',
+                          background: '#1d1d1f', color: '#fff', borderRadius: 10, padding: '12px 16px', fontSize: 12, minWidth: 180,
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.2)', marginTop: 4, whiteSpace: 'nowrap'
+                        }}>
+                          <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>健康度诊断</div>
+                          {a._health?.details.map((d: any) => (
+                            <div key={d.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+                              <span style={{ color: '#a1a1a6' }}>{d.label}</span>
+                              <span style={{ color: d.status === 'ok' ? '#34c759' : d.status === 'warn' ? '#ff9500' : '#ff3b30', fontWeight: 600 }}>
+                                {d.score}/{d.max}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </td>
                       {dashFields.map((f: any) => (
                         <td key={f.key} style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', color: '#515154', fontSize: 12 }}>
                           {f.key === 'account_type' ? (a.accountType || '-') :

@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
       date,
       accounts: new Set(costs.map(c => c.account_name)).size,
       records: costs.length,
+      updated: costs.length,
       unmatched: unmatched.length > 0 ? unmatched : undefined
     }, { headers: corsHeaders });
 
