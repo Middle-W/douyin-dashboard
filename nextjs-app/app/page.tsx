@@ -492,6 +492,35 @@ export default function DashboardPage() {
       }
     }
 
+    // 收集异常原因
+    const issues: string[] = [];
+    if (cost > 0) {
+      const margin = profit / cost;
+      if (margin < 0) issues.push(`利润率 ${(margin * 100).toFixed(1)}%，亏损状态`);
+      else if (margin < 0.05) issues.push(`利润率 ${(margin * 100).toFixed(1)}%，盈利薄弱`);
+    }
+    if (cost > 0) {
+      const roi = netIncome / cost;
+      if (roi < 0.5) issues.push(`ROI ${roi.toFixed(2)}，投产低于保本线`);
+      else if (roi < 1.0) issues.push(`ROI ${roi.toFixed(2)}，投产偏低`);
+    }
+    if (avgOrders === 0) issues.push('连续多日无单，活跃度极低');
+    else if (avgOrders < 5) issues.push(`日均 ${avgOrders.toFixed(1)} 单，活跃度低`);
+    if (dates.length >= 2) {
+      const mid = Math.floor(dates.length / 2);
+      const firstHalf = dates.slice(0, mid);
+      const secondHalf = dates.slice(mid);
+      const firstOrders = firstHalf.reduce((s, d) => s + (account.daily?.[d]?.orders || 0), 0);
+      const secondOrders = secondHalf.reduce((s, d) => s + (account.daily?.[d]?.orders || 0), 0);
+      const avgFirst = firstHalf.length > 0 ? firstOrders / firstHalf.length : 0;
+      const avgSecond = secondHalf.length > 0 ? secondOrders / secondHalf.length : 0;
+      if (avgFirst > 0) {
+        const change = (avgSecond - avgFirst) / avgFirst;
+        if (change < -0.30) issues.push(`趋势下滑 ${Math.abs(change * 100).toFixed(0)}%，单量明显萎缩`);
+        else if (change < -0.10) issues.push(`趋势下滑 ${Math.abs(change * 100).toFixed(0)}%，注意关注`);
+      }
+    }
+
     const total = Math.round(profitScore + roiScore + activeScore + trendScore + stabilityScore);
     return {
       total,
@@ -503,6 +532,7 @@ export default function DashboardPage() {
         { label: '趋势健康', score: Math.round(trendScore), max: 15, status: trendScore >= 12 ? 'ok' : trendScore >= 7 ? 'warn' : 'bad' as const },
         { label: '消耗稳定', score: Math.round(stabilityScore), max: 10, status: stabilityScore >= 8 ? 'ok' : stabilityScore >= 5 ? 'warn' : 'bad' as const },
       ],
+      issues,
     };
   }
 
@@ -905,13 +935,22 @@ export default function DashboardPage() {
                       {abnormal.length === 0 ? (
                         <div style={{ fontSize: 13, color: '#34c759', padding: '8px 0' }}>✅ 所有账号健康度正常</div>
                       ) : (
-                        abnormal.map((a: any) => (
-                          <div key={a.account} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f5f5f7' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff3b30', display: 'inline-block' }} />
-                              <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{a.account}</span>
+                        abnormal.map((a: any, idx: number) => (
+                          <div key={a.account} style={{ padding: '8px 0', borderBottom: idx < abnormal.length - 1 ? '1px solid #f5f5f7' : 'none' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff3b30', display: 'inline-block', flexShrink: 0 }} />
+                                <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{a.account}</span>
+                              </div>
+                              <span style={{ fontSize: 12, color: '#ff3b30', fontWeight: 600, flexShrink: 0 }}>{a._health?.total}分</span>
                             </div>
-                            <span style={{ fontSize: 12, color: '#ff3b30', fontWeight: 600 }}>{a._health?.total}分</span>
+                            {a._health?.issues?.length > 0 && (
+                              <div style={{ marginTop: 4, paddingLeft: 16, fontSize: 11, color: '#86868b', lineHeight: 1.6 }}>
+                                {a._health.issues.map((issue: string, i: number) => (
+                                  <span key={i}>· {issue}{i < a._health.issues.length - 1 ? ' · ' : ''}</span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))
                       )}
