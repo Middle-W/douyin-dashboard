@@ -143,13 +143,17 @@ export default function DashboardPage() {
     return map[fieldKey] || fieldKey;
   }
 
+  const healthLabelMap: Record<string, string> = { good: '🟢 健康', warn: '🟡 预警', bad: '🔴 危险' };
+
   // Dynamically build filter fields from fields config + actual data
   const allFilterFields: { key: string; label: string; dataKey: string }[] = useMemo(() => {
     if (!data) return [];
-    return (data.fields || [])
+    const fields = (data.fields || [])
       .filter((f: any) => f.show_in_dashboard && !['name','id','created_at'].includes(f.key))
       .map((f: any) => ({ key: f.key, label: f.label, dataKey: getDashDataKey(f.key) }))
       .filter((f: any) => allAccounts.some((a: any) => !!a[f.dataKey]));
+    // 添加健康度筛选
+    return [...fields, { key: 'health', label: '健康度', dataKey: '_healthGrade' }];
   }, [data, allAccounts]);
 
   const primaryFilters = allFilterFields.slice(0, 2);
@@ -181,6 +185,7 @@ export default function DashboardPage() {
     if (!data) return [];
     let result = allAccounts;
     for (const { dataKey } of allFilterFields) {
+      if (dataKey === '_healthGrade') continue; // 健康度在后面单独筛选
       const selected = dashFilters[dataKey] || [];
       if (selected.length > 0) {
         result = result.filter((a: any) => selected.includes(a[dataKey]));
@@ -209,7 +214,7 @@ export default function DashboardPage() {
     }
     for (const { label, dataKey } of allFilterFields) {
       const selected = dashFilters[dataKey] || [];
-      selected.forEach(v => tags.push({ key: `${dataKey}-${v}`, label: `${label}: ${v}`, onRemove: () => setDashFilters(prev => ({ ...prev, [dataKey]: (prev[dataKey] || []).filter(x => x !== v) })) }));
+      selected.forEach(v => tags.push({ key: `${dataKey}-${v}`, label: `${label}: ${healthLabelMap[v] || v}`, onRemove: () => setDashFilters(prev => ({ ...prev, [dataKey]: (prev[dataKey] || []).filter(x => x !== v) })) }));
     }
     return tags;
   })();
@@ -544,7 +549,13 @@ export default function DashboardPage() {
     _health: calcHealthScore(a, displayDates),
   }));
 
-  const sortedAccounts = [...accountsWithHealth].sort((a, b) => {
+  // 健康度筛选
+  const healthFilters = dashFilters['_healthGrade'] || [];
+  const filteredAccounts = healthFilters.length > 0
+    ? accountsWithHealth.filter((a: any) => healthFilters.includes(a._health?.grade))
+    : accountsWithHealth;
+
+  const sortedAccounts = [...filteredAccounts].sort((a, b) => {
     if (sortKey === 'health') {
       const diff = (a._health?.total || 0) - (b._health?.total || 0);
       return sortDesc ? -diff : diff;
@@ -705,7 +716,9 @@ export default function DashboardPage() {
 
           {/* Primary Field Filters */}
           {primaryFilters.map(({ label, dataKey }: { label: string; dataKey: string }) => {
-            const options: string[] = Array.from(new Set<string>(allAccounts.map((a: any) => String(a[dataKey] || '')))).filter(v => !!v).sort();
+            const options: string[] = dataKey === '_healthGrade'
+              ? ['good', 'warn', 'bad']
+              : Array.from(new Set<string>(allAccounts.map((a: any) => String(a[dataKey] || '')))).filter(v => !!v).sort();
             if (options.length === 0) return null;
             const selected = dashFilters[dataKey] || [];
             return (
@@ -726,7 +739,7 @@ export default function DashboardPage() {
                       color: isActive ? 'white' : '#515154',
                       fontWeight: isActive ? 600 : 400,
                       transition: 'all 0.15s'
-                    }}>{v}</button>
+                    }}>{healthLabelMap[v] || v}</button>
                   );
                 })}
               </div>
@@ -737,7 +750,9 @@ export default function DashboardPage() {
           {showMoreFilters && moreFilters.length > 0 && (
             <div style={{ marginBottom: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {moreFilters.map(({ label, dataKey }: { label: string; dataKey: string }) => {
-                const options: string[] = Array.from(new Set<string>(allAccounts.map((a: any) => String(a[dataKey] || '')))).filter(v => !!v).sort();
+                const options: string[] = dataKey === '_healthGrade'
+                  ? ['good', 'warn', 'bad']
+                  : Array.from(new Set<string>(allAccounts.map((a: any) => String(a[dataKey] || '')))).filter(v => !!v).sort();
                 if (options.length === 0) return null;
                 const selected = dashFilters[dataKey] || [];
                 return (
@@ -758,7 +773,7 @@ export default function DashboardPage() {
                           color: isActive ? 'white' : '#515154',
                           fontWeight: isActive ? 600 : 400,
                           transition: 'all 0.15s'
-                        }}>{v}</button>
+                        }}>{healthLabelMap[v] || v}</button>
                       );
                     })}
                   </div>
