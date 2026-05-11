@@ -1129,19 +1129,29 @@ export default function DashboardPage() {
                           </span>
                         </div>
                         <div style={{
-                          display: 'none', position: 'absolute', zIndex: 100, left: '50%', transform: 'translateX(-50%)', top: '100%',
-                          background: '#1d1d1f', color: '#fff', borderRadius: 10, padding: '12px 16px', fontSize: 12, minWidth: 180,
-                          boxShadow: '0 8px 32px rgba(0,0,0,0.2)', marginTop: 4, whiteSpace: 'nowrap'
+                          display: 'none', position: 'absolute', zIndex: 100, left: '50%', transform: 'translateX(-50%)', bottom: '100%',
+                          background: '#ffffff', color: '#1d1d1f', borderRadius: 14, padding: '14px 16px', fontSize: 12,
+                          minWidth: 200, maxWidth: 230, boxShadow: '0 12px 40px rgba(0,0,0,0.12)', marginBottom: 8,
+                          border: '1px solid rgba(0,0,0,0.06)'
                         }}>
-                          <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>健康度诊断</div>
-                          {a._health?.details.map((d: any) => (
-                            <div key={d.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-                              <span style={{ color: '#a1a1a6' }}>{d.label}</span>
-                              <span style={{ color: d.status === 'ok' ? '#34c759' : d.status === 'warn' ? '#ff9500' : '#ff3b30', fontWeight: 600 }}>
-                                {d.score}/{d.max}
-                              </span>
-                            </div>
-                          ))}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingBottom: 8, borderBottom: '1px solid #f0f0f0' }}>
+                            <span style={{ fontWeight: 700, fontSize: 13 }}>健康度诊断</span>
+                            <span style={{ fontSize: 16, fontWeight: 800, color: a._health?.grade === 'good' ? '#34c759' : a._health?.grade === 'warn' ? '#ff9500' : '#ff3b30' }}>{a._health?.total ?? '-'}<span style={{ fontSize: 11, fontWeight: 500, marginLeft: 2 }}>分</span></span>
+                          </div>
+                          {a._health?.details.map((d: any) => {
+                            const barColor = d.status === 'ok' ? '#34c759' : d.status === 'warn' ? '#ff9500' : '#ff3b30';
+                            return (
+                              <div key={d.label} style={{ marginBottom: 7 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                                  <span style={{ color: '#86868b', fontSize: 11 }}>{d.label}</span>
+                                  <span style={{ color: barColor, fontWeight: 600, fontSize: 11 }}>{d.score}/{d.max}</span>
+                                </div>
+                                <div style={{ height: 3, borderRadius: 2, background: '#f0f0f0', overflow: 'hidden' }}>
+                                  <div style={{ width: `${Math.min(100, (d.score / d.max) * 100)}%`, height: '100%', borderRadius: 2, background: barColor, transition: 'width 0.3s ease' }} />
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </td>
                       {dashFields.map((f: any) => (
