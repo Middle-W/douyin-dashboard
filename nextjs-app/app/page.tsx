@@ -927,7 +927,7 @@ export default function DashboardPage() {
                         <div style={{ padding: '0 10px', borderLeft: 'none' }}>
                           <div style={{ fontSize: 11, fontWeight: 600, color: '#86868b', marginBottom: 8, textAlign: 'center', background: '#fff', padding: '3px 0', borderRadius: 6, letterSpacing: 0.5 }}>单量排行</div>
                           {typeByOrders.map(([name, stats], i) => (
-                            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
+                            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
                               <span style={{ fontSize: 12, color: '#515154' }}>{name} <span style={{ color: '#c7c7cc', fontSize: 11 }}>({stats.count}号)</span></span>
                               <span style={{ fontSize: 12, fontWeight: 600, color: '#0071e3' }}>{Math.round(stats.orders / stats.count).toLocaleString()}</span>
                             </div>
@@ -937,7 +937,7 @@ export default function DashboardPage() {
                         <div style={{ padding: '0 10px', borderLeft: '1px solid #e5e5ea' }}>
                           <div style={{ fontSize: 11, fontWeight: 600, color: '#86868b', marginBottom: 8, textAlign: 'center', background: '#fff', padding: '3px 0', borderRadius: 6, letterSpacing: 0.5 }}>净佣金排行</div>
                           {typeByNetIncome.map(([name, stats], i) => (
-                            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
+                            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
                               <span style={{ fontSize: 12, color: '#515154' }}>{name} <span style={{ color: '#c7c7cc', fontSize: 11 }}>({stats.count}号)</span></span>
                               <span style={{ fontSize: 12, fontWeight: 600, color: '#af52de' }}>¥{Math.round(stats.netIncome / stats.count).toLocaleString()}</span>
                             </div>
@@ -947,7 +947,7 @@ export default function DashboardPage() {
                         <div style={{ padding: '0 10px', borderLeft: '1px solid #e5e5ea' }}>
                           <div style={{ fontSize: 11, fontWeight: 600, color: '#86868b', marginBottom: 8, textAlign: 'center', background: '#fff', padding: '3px 0', borderRadius: 6, letterSpacing: 0.5 }}>利润排行</div>
                           {typeByProfit.map(([name, stats], i) => (
-                            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
+                            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
                               <span style={{ fontSize: 12, color: '#515154' }}>{name} <span style={{ color: '#c7c7cc', fontSize: 11 }}>({stats.count}号)</span></span>
                               <span style={{ fontSize: 12, fontWeight: 600, color: stats.profit >= 0 ? '#34c759' : '#ff3b30' }}>¥{Math.round(stats.profit / stats.count).toLocaleString()}</span>
                             </div>
@@ -964,7 +964,7 @@ export default function DashboardPage() {
                         <div style={{ padding: '0 10px', borderLeft: 'none' }}>
                           <div style={{ fontSize: 11, fontWeight: 600, color: '#86868b', marginBottom: 8, textAlign: 'center', background: '#fff', padding: '3px 0', borderRadius: 6, letterSpacing: 0.5 }}>单量排行</div>
                           {buyerByOrders.map(([name, stats], i) => (
-                            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
+                            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
                               <span style={{ fontSize: 12, color: '#515154' }}>{name} <span style={{ color: '#c7c7cc', fontSize: 11 }}>({stats.count}号)</span></span>
                               <span style={{ fontSize: 12, fontWeight: 600, color: '#0071e3' }}>{Math.round(stats.orders / stats.count).toLocaleString()}</span>
                             </div>
@@ -974,7 +974,7 @@ export default function DashboardPage() {
                         <div style={{ padding: '0 10px', borderLeft: '1px solid #e5e5ea' }}>
                           <div style={{ fontSize: 11, fontWeight: 600, color: '#86868b', marginBottom: 8, textAlign: 'center', background: '#fff', padding: '3px 0', borderRadius: 6, letterSpacing: 0.5 }}>净佣金排行</div>
                           {buyerByNetIncome.map(([name, stats], i) => (
-                            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
+                            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
                               <span style={{ fontSize: 12, color: '#515154' }}>{name} <span style={{ color: '#c7c7cc', fontSize: 11 }}>({stats.count}号)</span></span>
                               <span style={{ fontSize: 12, fontWeight: 600, color: '#af52de' }}>¥{Math.round(stats.netIncome / stats.count).toLocaleString()}</span>
                             </div>
@@ -984,7 +984,7 @@ export default function DashboardPage() {
                         <div style={{ padding: '0 10px', borderLeft: '1px solid #e5e5ea' }}>
                           <div style={{ fontSize: 11, fontWeight: 600, color: '#86868b', marginBottom: 8, textAlign: 'center', background: '#fff', padding: '3px 0', borderRadius: 6, letterSpacing: 0.5 }}>利润排行</div>
                           {buyerByProfit.map(([name, stats], i) => (
-                            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
+                            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: i < 4 ? '1px solid #f5f5f7' : 'none' }}>
                               <span style={{ fontSize: 12, color: '#515154' }}>{name} <span style={{ color: '#c7c7cc', fontSize: 11 }}>({stats.count}号)</span></span>
                               <span style={{ fontSize: 12, fontWeight: 600, color: stats.profit >= 0 ? '#34c759' : '#ff3b30' }}>¥{Math.round(stats.profit / stats.count).toLocaleString()}</span>
                             </div>
