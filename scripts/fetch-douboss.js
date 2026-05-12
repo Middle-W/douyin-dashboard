@@ -264,7 +264,7 @@ async function scrapeAllPages(page) {
     };
   });
 
-  const totalPages = pageInfo.total > 0 ? Math.ceil(pageInfo.total / pageInfo.pageSize) : 1;
+  let totalPages = pageInfo.total > 0 ? Math.ceil(pageInfo.total / pageInfo.pageSize) : 1;
   log(`📊 共 ${pageInfo.total} 条，${totalPages} 页`);
 
   // 先回到第1页
@@ -277,6 +277,54 @@ async function scrapeAllPages(page) {
     }
   });
   await page.waitForTimeout(2000);
+
+  // 尝试切换为 100 条/页
+  const pageSizeChanged = await page.evaluate(() => {
+    const sizeChanger = document.querySelector('.arco-pagination-size-changer, .arco-select');
+    if (!sizeChanger) return false;
+    sizeChanger.click();
+    return true;
+  });
+
+  if (pageSizeChanged) {
+    await page.waitForTimeout(800);
+    const selected100 = await page.evaluate(() => {
+      const options = document.querySelectorAll('.arco-select-option, .arco-dropdown-menu-item, .arco-list-item');
+      for (const opt of options) {
+        if (opt.textContent.includes('100')) {
+          opt.click();
+          return true;
+        }
+      }
+      return false;
+    });
+    if (selected100) {
+      await page.waitForTimeout(2500);
+      log('✅ 已切换为 100条/页');
+      // 重新获取分页信息
+      const newPageInfo = await page.evaluate(() => {
+        const pagination = document.querySelector('.arco-pagination');
+        let totalMatch = null;
+        if (pagination) totalMatch = pagination.textContent.match(/共\s*(\d+)\s*条/);
+        if (!totalMatch) {
+          const tableArea = document.querySelector('.arco-table, table');
+          if (tableArea) {
+            const parent = tableArea.closest('div') || tableArea.parentElement;
+            totalMatch = parent.textContent.match(/共\s*(\d+)\s*条/);
+          }
+        }
+        const sizeMatch = document.body.innerText.match(/(\d+)\s*条\/页/);
+        return {
+          total: totalMatch ? parseInt(totalMatch[1]) : 0,
+          pageSize: sizeMatch ? parseInt(sizeMatch[1]) : 10,
+        };
+      });
+      pageInfo.total = newPageInfo.total;
+      pageInfo.pageSize = newPageInfo.pageSize;
+      totalPages = pageInfo.total > 0 ? Math.ceil(pageInfo.total / pageInfo.pageSize) : 1;
+      log(`📊 更新后：共 ${pageInfo.total} 条，${totalPages} 页`);
+    }
+  }
 
   while (pageNum <= totalPages) {
     log(`📄 第 ${pageNum}/${totalPages} 页...`);
