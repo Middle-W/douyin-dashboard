@@ -270,13 +270,18 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, activeMetric, displayDates]);
 
-  // 下次更新时间倒计时（每小时 03 分）
+  // 下次更新时间倒计时（每半小时：05分 / 35分）
   useEffect(() => {
     function getNextUpdateTime() {
       const now = new Date();
       const next = new Date(now);
-      next.setMinutes(3, 0, 0);
-      if (now.getMinutes() >= 3) {
+      const m = now.getMinutes();
+      if (m < 5) {
+        next.setMinutes(5, 0, 0);
+      } else if (m < 35) {
+        next.setMinutes(35, 0, 0);
+      } else {
+        next.setMinutes(5, 0, 0);
         next.setHours(next.getHours() + 1);
       }
       return next;
@@ -594,7 +599,14 @@ export default function DashboardPage() {
   });
 
   return (
-    <div style={{ background: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+    <>
+      <style>{`
+        @keyframes dash-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(0.75); }
+        }
+      `}</style>
+      <div style={{ background: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       {/* Header */}
       <div style={{ background: '#ffffff', borderBottom: '1px solid #e8e8ed', color: '#1d1d1f', padding: '28px 24px' }}>
         <div style={{ maxWidth: '100%', margin: '0 auto', padding: '0 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -604,10 +616,31 @@ export default function DashboardPage() {
               📅 {displayDates[0] || ''} 至 {displayDates[displayDates.length - 1] || ''} · 📊 {allAccounts.length} 个账号
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
             <a href="/admin" style={{ padding: '8px 20px', background: '#0071e3', color: 'white', textDecoration: 'none', borderRadius: 980, fontSize: 14, fontWeight: 500 }}>管理后台</a>
-            <div style={{ fontSize: 12, color: '#86868b', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
-              ⏳ 下次更新 {countdown}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '6px 16px',
+              background: 'linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%)',
+              borderRadius: 980,
+              border: '1px solid #dbe4ff',
+              fontSize: 12, color: '#5a6370', fontWeight: 500,
+              boxShadow: '0 2px 8px rgba(0,113,227,0.06)'
+            }}>
+              <span style={{
+                width: 7, height: 7, borderRadius: '50%', background: '#34c759', display: 'inline-block',
+                boxShadow: '0 0 0 3px rgba(52,199,89,0.15)',
+                animation: 'dash-pulse 2.4s ease-in-out infinite'
+              }} />
+              <span>下次更新</span>
+              <span style={{
+                fontWeight: 700, color: '#0071e3',
+                fontFamily: 'SF Mono, Monaco, "Cascadia Code", monospace',
+                fontVariantNumeric: 'tabular-nums',
+                letterSpacing: '0.02em'
+              }}>
+                {countdown}
+              </span>
             </div>
           </div>
         </div>
@@ -1235,5 +1268,6 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
