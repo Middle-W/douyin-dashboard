@@ -1175,12 +1175,12 @@ export default function DashboardPage() {
                     <tr key={a.account} style={{ background: i % 2 === 1 ? '#fafafa' : '#ffffff', transition: 'background 0.12s' }} onMouseEnter={e => (e.currentTarget.style.background = '#f5f5f7')} onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 1 ? '#fafafa' : '#ffffff')}>
                       <td style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', fontWeight: 600, color: '#86868b', fontSize: 12 }}>{i + 1}</td>
                       <td style={{ padding: '10px 8px', borderBottom: '1px solid #f0f0f0', fontWeight: 600, color: '#1d1d1f', width: 100 }}>{a.account}</td>
-                      <td style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', position: 'relative' }}>
+                      <td style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', position: 'relative', zIndex: 200 }}>
                         <div
                           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'help' }}
                           onMouseEnter={e => {
                             const tooltip = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (tooltip) tooltip.style.display = 'block';
+                            if (tooltip) { tooltip.style.display = 'block'; tooltip.style.zIndex = '9999'; }
                           }}
                           onMouseLeave={e => {
                             const tooltip = e.currentTarget.nextElementSibling as HTMLElement;
@@ -1196,7 +1196,7 @@ export default function DashboardPage() {
                           </span>
                         </div>
                         <div style={{
-                          display: 'none', position: 'absolute', zIndex: 100, left: '50%', transform: 'translateX(-50%)', bottom: '100%',
+                          display: 'none', position: 'absolute', zIndex: 9999, left: '50%', transform: 'translateX(-50%)', bottom: '100%',
                           background: '#ffffff', color: '#1d1d1f', borderRadius: 14, padding: '14px 16px', fontSize: 12,
                           minWidth: 200, maxWidth: 230, boxShadow: '0 12px 40px rgba(0,0,0,0.12)', marginBottom: 8,
                           border: '1px solid rgba(0,0,0,0.06)'
