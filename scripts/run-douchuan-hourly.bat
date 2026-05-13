@@ -11,4 +11,5 @@ if %errorlevel% neq 0 (
 
 cd /d "C:\Users\W\Desktop\Kimi Code\douyin-dashboard\scripts"
 set API_URL=http://localhost:3000/api/import-cost-json
+set HEADLESS=true
 "C:\Program Files\nodejs\node.exe" fetch-douchuan-hourly.js
