@@ -55,6 +55,8 @@ export default function DashboardPage() {
     try { return localStorage.getItem('dash_show_report') !== 'false'; } catch { return true; }
   });
 
+  const [countdown, setCountdown] = useState('');
+
   const dashFields = (data?.fields || []).filter((f: any) => f.show_in_dashboard);
 
   // Date preset helper - safe for any month/year
@@ -267,6 +269,33 @@ export default function DashboardPage() {
     renderTop10Chart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, activeMetric, displayDates]);
+
+  // 下次更新时间倒计时（每小时 03 分）
+  useEffect(() => {
+    function getNextUpdateTime() {
+      const now = new Date();
+      const next = new Date(now);
+      next.setMinutes(3, 0, 0);
+      if (now.getMinutes() >= 3) {
+        next.setHours(next.getHours() + 1);
+      }
+      return next;
+    }
+    function formatCountdown(ms: number) {
+      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    }
+    function tick() {
+      const diff = getNextUpdateTime().getTime() - Date.now();
+      setCountdown(formatCountdown(diff));
+    }
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   function getMetricValue(a: any, metric: Metric) {
     if (metric === 'orders') return a.totalOrders || 0;
@@ -575,7 +604,12 @@ export default function DashboardPage() {
               📅 {displayDates[0] || ''} 至 {displayDates[displayDates.length - 1] || ''} · 📊 {allAccounts.length} 个账号
             </div>
           </div>
-          <a href="/admin" style={{ padding: '8px 20px', background: '#0071e3', color: 'white', textDecoration: 'none', borderRadius: 980, fontSize: 14, fontWeight: 500 }}>管理后台</a>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            <a href="/admin" style={{ padding: '8px 20px', background: '#0071e3', color: 'white', textDecoration: 'none', borderRadius: 980, fontSize: 14, fontWeight: 500 }}>管理后台</a>
+            <div style={{ fontSize: 12, color: '#86868b', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
+              ⏳ 下次更新 {countdown}
+            </div>
+          </div>
         </div>
       </div>
 
