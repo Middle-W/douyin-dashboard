@@ -16,7 +16,7 @@ const METRIC_KEYS: Metric[] = ['orders', 'netIncome', 'cost', 'profit'];
 function getLast7Days(): string[] {
   const dates: string[] = [];
   const today = new Date();
-  for (let i = 7; i >= 1; i--) {
+  for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
     const y = d.getFullYear();
@@ -82,13 +82,13 @@ export default function DashboardPage() {
       return [fmt(s), fmt(s)];
     }
     if (preset === '近7天') {
-      const s = new Date(y, m, d - 7);
-      const e = new Date(y, m, d - 1);
+      const s = new Date(y, m, d - 6);
+      const e = new Date(y, m, d);
       return [fmt(s), fmt(e)];
     }
     if (preset === '近30天') {
-      const s = new Date(y, m, d - 30);
-      const e = new Date(y, m, d - 1);
+      const s = new Date(y, m, d - 29);
+      const e = new Date(y, m, d);
       return [fmt(s), fmt(e)];
     }
     if (preset === '本月') {
