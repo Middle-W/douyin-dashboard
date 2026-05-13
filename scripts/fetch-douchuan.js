@@ -93,15 +93,29 @@ async function main() {
       await page.waitForTimeout(30000);
       await context.storageState({ path: STATE_FILE });
       log('✅ 登录态已保存');
+      // 登录后重新导航到账户报表页面
+      log('🌐 重新加载账户报表页面...');
+      await page.goto(CONFIG.douchuanUrl, { waitUntil: 'networkidle', timeout: 60000 });
+      await page.waitForTimeout(3000);
     }
 
-    // 检查是否有表格数据
-    const hasTable = await page.evaluate(() => {
-      return document.querySelectorAll('table tbody tr, .ant-table-tbody tr').length > 0;
-    });
+    // 检查是否有表格数据（重试3次，等待表格异步加载）
+    let hasTable = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      hasTable = await page.evaluate(() => {
+        return document.querySelectorAll('table tbody tr, .ant-table-tbody tr, .arco-table-tbody tr').length > 0;
+      });
+      if (hasTable) break;
+      log(`   ⏳ 等待表格加载... (${attempt + 1}/3)`);
+      await page.waitForTimeout(3000);
+    }
 
     if (!hasTable) {
+      const debugInfo = await page.evaluate(() => ({ title: document.title, url: location.href, bodyPreview: document.body.innerText.substring(0, 500) }));
       log('❌ 未检测到表格数据，可能未登录或页面加载失败');
+      log('   页面标题:', debugInfo.title);
+      log('   页面URL:', debugInfo.url);
+      log('   内容预览:', debugInfo.bodyPreview.substring(0, 200));
       return;
     }
     log('✅ 登录状态正常，检测到表格数据');
