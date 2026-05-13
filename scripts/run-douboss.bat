@@ -3,7 +3,7 @@
 netstat -an | find "3000" | find "LISTENING" >nul
 if %errorlevel% neq 0 (
     echo [定时任务] 本地服务未运行，正在启动...
-    powershell -WindowStyle Hidden -Command "Start-Process -FilePath 'cmd' -ArgumentList '/c cd /d \"C:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app\" && \"C:\Program Files\nodejs\npm.cmd\" run dev' -WindowStyle Hidden"
+    start /min cmd /c "cd /d ""C:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app"" && ""C:\Program Files\nodejs\npm.cmd"" run dev"
     timeout /t 25 /nobreak >nul
     echo [定时任务] 等待服务启动完成
 )
