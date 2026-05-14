@@ -878,7 +878,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Metric Tabs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, alignContent: 'start' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, height: '100%' }}>
           {METRIC_KEYS.map(m => {
             const c = METRIC_CONFIG[m];
             const val = displayAccounts.reduce((s: number, a: any) => s + getDisplayMetricValue(a, m), 0);
@@ -900,6 +900,7 @@ export default function DashboardPage() {
                   boxShadow: isActive ? `0 6px 24px ${c.color}28` : '0 2px 10px rgba(0,0,0,0.05)',
                   transition: 'all 0.25s ease',
                   transform: isActive ? 'translateY(-3px)' : 'none',
+                  height: '100%',
                 }}
               >
                 {/* 上部色块标题区 */}
