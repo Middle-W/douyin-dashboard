@@ -70,7 +70,7 @@ async function main() {
   try {
     browser = await chromium.launch({
       executablePath: CONFIG.chromePath,
-      headless: false,
+      headless: CONFIG.headless,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     });
 

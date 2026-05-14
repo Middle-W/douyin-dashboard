@@ -93,7 +93,7 @@ async function main() {
   try {
     browser = await chromium.launch({
       executablePath: CONFIG.chromePath,
-      headless: false, // 首次必须可见，后续可 headless
+      headless: CONFIG.headless,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
     });
 
