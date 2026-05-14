@@ -647,59 +647,6 @@ export default function DashboardPage() {
       </div>
 
       <div style={{ maxWidth: '100%', margin: '0 auto', padding: '24px 32px' }}>
-        {/* Metric Tabs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
-        {METRIC_KEYS.map(m => {
-          const c = METRIC_CONFIG[m];
-          const val = displayAccounts.reduce((s: number, a: any) => s + getDisplayMetricValue(a, m), 0);
-          const isActive = activeMetric === m;
-          const isNegativeProfit = m === 'profit' && val < 0;
-          return (
-            <button
-              key={m}
-              onClick={() => setActiveMetric(m)}
-              style={{
-                borderRadius: 18,
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-                padding: 0,
-                background: '#ffffff',
-                boxShadow: isActive ? `0 6px 24px ${c.color}28` : '0 2px 10px rgba(0,0,0,0.05)',
-                transition: 'all 0.25s ease',
-                transform: isActive ? 'translateY(-3px)' : 'none',
-              }}
-            >
-              {/* 上部色块标题区 */}
-              <div style={{
-                height: '33%',
-                minHeight: 56,
-                background: isNegativeProfit ? '#ff3b30' : c.color,
-                display: 'flex',
-                alignItems: 'center',
-                padding: '0 20px',
-                gap: 8,
-              }}>
-                <span style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.22)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#ffffff' }}>{c.icon}</span>
-                <span style={{ fontSize: 15, fontWeight: 600, color: '#ffffff', letterSpacing: '0.04em' }}>{c.label}</span>
-              </div>
-              {/* 下部数值区 */}
-              <div style={{
-                flex: 1,
-                display: 'flex',
-                alignItems: 'center',
-                padding: '16px 20px',
-                background: '#ffffff',
-              }}>
-                <div style={{ fontSize: 34, fontWeight: 700, color: isNegativeProfit ? '#ff3b30' : '#1d1d1f' }}>{formatValue(val, m)}</div>
-              </div>
-            </button>
-          );
-        })}
-        </div>
-
         <div style={{ background: '#ffffff', borderRadius: 20, padding: 24, marginBottom: 28, boxShadow: '0 4px 24px rgba(0,0,0,0.04)', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 28, alignItems: 'stretch', position: 'sticky', top: 0, zIndex: 50 }}>
           {/* Filters */}
           <div>
@@ -930,6 +877,58 @@ export default function DashboardPage() {
           )}
           </div>
 
+          {/* Metric Tabs */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, alignContent: 'start' }}>
+          {METRIC_KEYS.map(m => {
+            const c = METRIC_CONFIG[m];
+            const val = displayAccounts.reduce((s: number, a: any) => s + getDisplayMetricValue(a, m), 0);
+            const isActive = activeMetric === m;
+            const isNegativeProfit = m === 'profit' && val < 0;
+            return (
+              <button
+                key={m}
+                onClick={() => setActiveMetric(m)}
+                style={{
+                  borderRadius: 18,
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  overflow: 'hidden',
+                  padding: 0,
+                  background: '#ffffff',
+                  boxShadow: isActive ? `0 6px 24px ${c.color}28` : '0 2px 10px rgba(0,0,0,0.05)',
+                  transition: 'all 0.25s ease',
+                  transform: isActive ? 'translateY(-3px)' : 'none',
+                }}
+              >
+                {/* 上部色块标题区 */}
+                <div style={{
+                  height: '33%',
+                  minHeight: 56,
+                  background: isNegativeProfit ? '#ff3b30' : c.color,
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '0 20px',
+                  gap: 8,
+                }}>
+                  <span style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.22)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#ffffff' }}>{c.icon}</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: '#ffffff', letterSpacing: '0.04em' }}>{c.label}</span>
+                </div>
+                {/* 下部数值区 */}
+                <div style={{
+                  flex: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '16px 20px',
+                  background: '#ffffff',
+                }}>
+                  <div style={{ fontSize: 34, fontWeight: 700, color: isNegativeProfit ? '#ff3b30' : '#1d1d1f' }}>{formatValue(val, m)}</div>
+                </div>
+              </button>
+            );
+          })}
+          </div>
         </div>
 
         {/* Daily Report Card */}
