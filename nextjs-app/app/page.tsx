@@ -55,8 +55,6 @@ export default function DashboardPage() {
     try { return localStorage.getItem('dash_show_report') !== 'false'; } catch { return true; }
   });
 
-  const [showScriptPaths, setShowScriptPaths] = useState(false);
-
   const [countdown, setCountdown] = useState('');
 
   const dashFields = (data?.fields || []).filter((f: any) => f.show_in_dashboard);
@@ -649,6 +647,59 @@ export default function DashboardPage() {
       </div>
 
       <div style={{ maxWidth: '100%', margin: '0 auto', padding: '24px 32px' }}>
+        {/* Metric Tabs */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
+        {METRIC_KEYS.map(m => {
+          const c = METRIC_CONFIG[m];
+          const val = displayAccounts.reduce((s: number, a: any) => s + getDisplayMetricValue(a, m), 0);
+          const isActive = activeMetric === m;
+          const isNegativeProfit = m === 'profit' && val < 0;
+          return (
+            <button
+              key={m}
+              onClick={() => setActiveMetric(m)}
+              style={{
+                borderRadius: 18,
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+                padding: 0,
+                background: '#ffffff',
+                boxShadow: isActive ? `0 6px 24px ${c.color}28` : '0 2px 10px rgba(0,0,0,0.05)',
+                transition: 'all 0.25s ease',
+                transform: isActive ? 'translateY(-3px)' : 'none',
+              }}
+            >
+              {/* 上部色块标题区 */}
+              <div style={{
+                height: '33%',
+                minHeight: 56,
+                background: isNegativeProfit ? '#ff3b30' : c.color,
+                display: 'flex',
+                alignItems: 'center',
+                padding: '0 20px',
+                gap: 8,
+              }}>
+                <span style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.22)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#ffffff' }}>{c.icon}</span>
+                <span style={{ fontSize: 15, fontWeight: 600, color: '#ffffff', letterSpacing: '0.04em' }}>{c.label}</span>
+              </div>
+              {/* 下部数值区 */}
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                padding: '16px 20px',
+                background: '#ffffff',
+              }}>
+                <div style={{ fontSize: 34, fontWeight: 700, color: isNegativeProfit ? '#ff3b30' : '#1d1d1f' }}>{formatValue(val, m)}</div>
+              </div>
+            </button>
+          );
+        })}
+        </div>
+
         <div style={{ background: '#ffffff', borderRadius: 20, padding: 24, marginBottom: 28, boxShadow: '0 4px 24px rgba(0,0,0,0.04)', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 28, alignItems: 'stretch', position: 'sticky', top: 0, zIndex: 50 }}>
           {/* Filters */}
           <div>
@@ -851,33 +902,6 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* Script paths - inside more filters area */}
-          {showMoreFilters && (
-            <div style={{ marginTop: 12, padding: 12, borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 8 }}>📁 脚本路径</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 11, color: '#64748b', minWidth: 80 }}>斗老板抓取：</span>
-                  <code style={{ fontSize: 11, color: '#0f766e', wordBreak: 'break-all', fontFamily: 'SF Mono, Monaco, monospace', background: '#f0fdf4', padding: '2px 6px', borderRadius: 4 }}>
-                    {typeof window !== 'undefined' ? `${window.location.origin}/fetch_douboss.js` : '/fetch_douboss.js'}
-                  </code>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 11, color: '#64748b', minWidth: 80 }}>抖船抓取：</span>
-                  <code style={{ fontSize: 11, color: '#0f766e', wordBreak: 'break-all', fontFamily: 'SF Mono, Monaco, monospace', background: '#f0fdf4', padding: '2px 6px', borderRadius: 4 }}>
-                    {typeof window !== 'undefined' ? `${window.location.origin}/fetch_douchuan.js` : '/fetch_douchuan.js'}
-                  </code>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 11, color: '#64748b', minWidth: 80 }}>定时任务：</span>
-                  <code style={{ fontSize: 11, color: '#334155', wordBreak: 'break-all', fontFamily: 'SF Mono, Monaco, monospace', background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>
-                    C:\Users\W\Desktop\Kimi Code\douyin-dashboard\scripts\
-                  </code>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Bottom bar: More Filters button + Active filter tags on same row */}
           {(moreFilters.length > 0 || activeFilters.length > 0) && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
@@ -906,66 +930,6 @@ export default function DashboardPage() {
           )}
           </div>
 
-          {/* Script Paths button - always visible */}
-          <div style={{ marginTop: 12, marginBottom: 4 }}>
-            <button onClick={() => setShowScriptPaths(true)}
-              style={{ padding: '6px 14px', borderRadius: 10, border: '1px solid #e8e8ed', background: '#ffffff', color: '#475569', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              📁 脚本路径
-            </button>
-          </div>
-
-          {/* Metric Tabs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14 }}>
-          {METRIC_KEYS.map(m => {
-            const c = METRIC_CONFIG[m];
-            const val = displayAccounts.reduce((s: number, a: any) => s + getDisplayMetricValue(a, m), 0);
-            const isActive = activeMetric === m;
-            const isNegativeProfit = m === 'profit' && val < 0;
-            return (
-              <button
-                key={m}
-                onClick={() => setActiveMetric(m)}
-                style={{
-                  borderRadius: 18,
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  overflow: 'hidden',
-                  padding: 0,
-                  background: '#ffffff',
-                  boxShadow: isActive ? `0 6px 24px ${c.color}28` : '0 2px 10px rgba(0,0,0,0.05)',
-                  transition: 'all 0.25s ease',
-                  transform: isActive ? 'translateY(-3px)' : 'none',
-                }}
-              >
-                {/* 上部色块标题区 */}
-                <div style={{
-                  height: '33%',
-                  minHeight: 56,
-                  background: isNegativeProfit ? '#ff3b30' : c.color,
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0 20px',
-                  gap: 8,
-                }}>
-                  <span style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.22)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 700, color: '#ffffff' }}>{c.icon}</span>
-                  <span style={{ fontSize: 15, fontWeight: 600, color: '#ffffff', letterSpacing: '0.04em' }}>{c.label}</span>
-                </div>
-                {/* 下部数值区 */}
-                <div style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '16px 20px',
-                  background: '#ffffff',
-                }}>
-                  <div style={{ fontSize: 34, fontWeight: 700, color: isNegativeProfit ? '#ff3b30' : '#1d1d1f' }}>{formatValue(val, m)}</div>
-                </div>
-              </button>
-            );
-          })}
-          </div>
         </div>
 
         {/* Daily Report Card */}
@@ -1305,53 +1269,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Script Paths Modal */}
-      {showScriptPaths && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => setShowScriptPaths(false)}>
-          <div style={{ background: 'white', borderRadius: 20, padding: 32, width: 560, maxWidth: '90vw', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
-            <h2 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>📁 脚本路径</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>浏览器 Bookmarklet（控制台粘贴执行）</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ padding: 12, borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>斗老板订单抓取</div>
-                    <code style={{ fontSize: 12, color: '#0f766e', wordBreak: 'break-all', fontFamily: 'SF Mono, Monaco, monospace' }}>
-                      {typeof window !== 'undefined' ? `${window.location.origin}/fetch_douboss.js` : '/fetch_douboss.js'}
-                    </code>
-                  </div>
-                  <div style={{ padding: 12, borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>抖船消耗抓取</div>
-                    <code style={{ fontSize: 12, color: '#0f766e', wordBreak: 'break-all', fontFamily: 'SF Mono, Monaco, monospace' }}>
-                      {typeof window !== 'undefined' ? `${window.location.origin}/fetch_douchuan.js` : '/fetch_douchuan.js'}
-                    </code>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 6 }}>定时任务脚本（本地路径）</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ padding: 12, borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>斗老板定时任务</div>
-                    <code style={{ fontSize: 12, color: '#334155', wordBreak: 'break-all', fontFamily: 'SF Mono, Monaco, monospace' }}>
-                      C:\Users\W\Desktop\Kimi Code\douyin-dashboard\scripts\run-douboss.bat
-                    </code>
-                  </div>
-                  <div style={{ padding: 12, borderRadius: 10, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>抖船定时任务</div>
-                    <code style={{ fontSize: 12, color: '#334155', wordBreak: 'break-all', fontFamily: 'SF Mono, Monaco, monospace' }}>
-                      C:\Users\W\Desktop\Kimi Code\douyin-dashboard\scripts\run-douchuan.bat
-                    </code>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowScriptPaths(false)} style={{ padding: '10px 24px', borderRadius: 10, border: '1px solid #e8e8ed', background: 'white', fontSize: 14, cursor: 'pointer', color: '#1d1d1f', fontWeight: 500 }}>关闭</button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
     </>
   );
