@@ -244,6 +244,14 @@ export default function DashboardPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Mobile redirect
+  useEffect(() => {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile/i.test(navigator.userAgent);
+    if (isMobile && !window.location.pathname.startsWith('/mobile')) {
+      window.location.href = '/mobile';
+    }
+  }, []);
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (datePickerRef.current && !datePickerRef.current.contains(e.target as Node)) {
