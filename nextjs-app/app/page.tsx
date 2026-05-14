@@ -1180,8 +1180,18 @@ export default function DashboardPage() {
                         <div
                           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'help' }}
                           onMouseEnter={e => {
-                            const tooltip = e.currentTarget.nextElementSibling as HTMLElement;
-                            if (tooltip) tooltip.style.display = 'block';
+                            const trigger = e.currentTarget;
+                            const tooltip = trigger.nextElementSibling as HTMLElement;
+                            if (tooltip) {
+                              const rect = trigger.getBoundingClientRect();
+                              tooltip.style.display = 'block';
+                              tooltip.style.position = 'fixed';
+                              tooltip.style.left = `${rect.left + rect.width / 2 - tooltip.offsetWidth / 2}px`;
+                              tooltip.style.top = `${rect.top - tooltip.offsetHeight - 8}px`;
+                              tooltip.style.transform = 'none';
+                              tooltip.style.bottom = 'auto';
+                              tooltip.style.zIndex = '99999';
+                            }
                           }}
                           onMouseLeave={e => {
                             const tooltip = e.currentTarget.nextElementSibling as HTMLElement;
