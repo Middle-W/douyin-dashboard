@@ -32,7 +32,10 @@ export async function GET(request: NextRequest) {
         .lte('date', endStr)
         .order('date');
       if (error) throw error;
-      const dates = [...new Set((data || []).map((d: any) => d.date))];
+      const dates = [...new Set((data || []).map((d: any) => {
+        const ds = String(d.date || '');
+        return ds.includes('T') ? ds.split('T')[0] : ds.slice(0, 10);
+      }))];
       return NextResponse.json({ dates }, { headers: corsHeaders });
     }
 
