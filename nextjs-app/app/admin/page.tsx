@@ -387,7 +387,7 @@ export default function AdminPage() {
           {[
             { title: '📦 上传订单数据', desc: '精选订单Excel，按天聚合', api: '/api/upload' },
             { title: '🔥 上传消耗数据', desc: '消耗Excel（账号名+日期列+金额）', api: '/api/upload-cost' },
-            { title: '📋 上传账号基础信息', desc: '批量更新类型、选品人等', api: '/api/upload-meta' },
+            { title: '📋 上传账号基础信息', desc: 'Excel 第一行为字段名（如：抖音名称/类型/状态/选品人/编号/备注/运营人），下方每行一个账号', api: '/api/upload-meta' },
           ].map(card => (
             <div key={card.api} style={{ background: 'white', borderRadius: 20, padding: 24, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
               <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: '#1d1d1f' }}>{card.title}</div>
