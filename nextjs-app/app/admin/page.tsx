@@ -77,7 +77,28 @@ export default function AdminPage() {
   // Data calendar picker
   const [showDataCalendar, setShowDataCalendar] = useState(false);
   const [dataCalMonth, setDataCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
+  const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const dataCalendarRef = useRef<HTMLDivElement>(null);
+
+  const loadAvailableDates = async (tab: 'stats'|'costs', month: string) => {
+    try {
+      const api = tab === 'stats' ? '/api/data-stats' : '/api/data-costs';
+      const res = await fetch(`${api}?month=${month}&t=${Date.now()}`, { cache: 'no-store' });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setAvailableDates(new Set(json.dates || []));
+    } catch (e) {
+      console.error('Load available dates error:', e);
+      setAvailableDates(new Set());
+    }
+  };
+
+  useEffect(() => {
+    if (showDataCalendar) {
+      const month = `${dataCalMonth.getFullYear()}-${String(dataCalMonth.getMonth() + 1).padStart(2, '0')}`;
+      loadAvailableDates(dataTab, month);
+    }
+  }, [showDataCalendar, dataCalMonth, dataTab]);
 
   const loadAccounts = useCallback(async () => {
     try {
@@ -130,11 +151,8 @@ export default function AdminPage() {
       return Array.from(allKeys).some(k => String(a[k] || '').toLowerCase().includes(s));
     })
     .sort((a, b) => {
-      const ca = String(a.code || '').trim();
-      const cb = String(b.code || '').trim();
-      if (!ca && !cb) return 0;
-      if (!ca) return 1;
-      if (!cb) return -1;
+      const ca = String(a.code || '').trim() || String(a.name || '').trim();
+      const cb = String(b.code || '').trim() || String(b.name || '').trim();
       return ca.localeCompare(cb, 'zh-CN');
     });
 
@@ -297,17 +315,14 @@ export default function AdminPage() {
       const json = await res.json();
       if (json.error) throw new Error(json.error);
       const raw = tab === 'stats' ? json.stats : json.costs;
-      // Sort by account code to match account list order
+      // Sort by account code (fallback to name) to match account list order
       const sorted = [...raw].sort((a: any, b: any) => {
         const getCode = (name: string) => {
           const acc = accounts.find((ac: any) => String(ac.name || '') === name);
-          return String(acc?.code || '').trim();
+          return String(acc?.code || '').trim() || String(name || '').trim();
         };
         const ca = getCode(a.account_name);
         const cb = getCode(b.account_name);
-        if (!ca && !cb) return String(a.account_name).localeCompare(String(b.account_name), 'zh-CN');
-        if (!ca) return 1;
-        if (!cb) return -1;
         return ca.localeCompare(cb, 'zh-CN');
       });
       setDataList(sorted);
@@ -653,13 +668,15 @@ export default function AdminPage() {
                     const today = new Date();
                     const isToday = sameDay(cell.date, today);
                     const isSelected = dataDate && sameDay(cell.date, new Date(dataDate + 'T00:00:00'));
+                    const dateStr = fmtYMD(cell.date.getFullYear(), cell.date.getMonth(), cell.date.getDate());
                     let bg = 'transparent';
                     let color = cell.current ? '#1d1d1f' : '#c5c5c7';
                     if (isSelected) { bg = '#0071e3'; color = 'white'; }
+                    else if (cell.current && !availableDates.has(dateStr)) { color = '#c5c5c7'; }
                     return (
                       <div
                         key={idx}
-                        onClick={(e) => { e.stopPropagation(); setDataDate(fmtYMD(cell.date.getFullYear(), cell.date.getMonth(), cell.date.getDate())); setShowDataCalendar(false); }}
+                        onClick={(e) => { e.stopPropagation(); setDataDate(dateStr); setShowDataCalendar(false); }}
                         style={{ textAlign: 'center', padding: '6px 0', fontSize: 13, cursor: 'pointer', borderRadius: 4, background: bg, color, fontWeight: isToday ? 700 : 400, position: 'relative' }}
                       >
                         {cell.date.getDate()}

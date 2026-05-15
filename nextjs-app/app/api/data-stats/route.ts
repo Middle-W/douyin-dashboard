@@ -14,11 +14,28 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
 
-// GET /api/data-stats?date=YYYY-MM-DD
+// GET /api/data-stats?date=YYYY-MM-DD 或 ?month=YYYY-MM
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
+    const month = searchParams.get('month');
+
+    if (month && /^\d{4}-\d{2}$/.test(month)) {
+      const [y, m] = month.split('-').map(Number);
+      const nextMonth = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+      const monthEnd = new Date(y, m, 0);
+      const endStr = `${monthEnd.getFullYear()}-${String(monthEnd.getMonth() + 1).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;
+      const { data, error } = await supabaseAdmin
+        .from('daily_stats')
+        .select('date')
+        .gte('date', `${month}-01`)
+        .lte('date', endStr)
+        .order('date');
+      if (error) throw error;
+      const dates = [...new Set((data || []).map((d: any) => d.date))];
+      return NextResponse.json({ dates }, { headers: corsHeaders });
+    }
 
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return NextResponse.json({ error: 'Invalid date format' }, { status: 400, headers: corsHeaders });
