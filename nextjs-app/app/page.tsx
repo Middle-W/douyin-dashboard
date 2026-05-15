@@ -777,11 +777,12 @@ export default function DashboardPage() {
                                 const isRange = fromDate && toDate && cell.date > new Date(Math.min(fromDate.getTime(), toDate.getTime())) && cell.date < new Date(Math.max(fromDate.getTime(), toDate.getTime()));
 
                                 const dateStr = fmtYMD(cell.date.getFullYear(), cell.date.getMonth(), cell.date.getDate());
+                                const hasData = availableDates.has(dateStr);
                                 let bg = 'transparent';
                                 let color = cell.current ? '#1d1d1f' : '#c5c5c7';
                                 if (isStart || isEnd) { bg = '#0071e3'; color = 'white'; }
-                                else if (isRange) { bg = '#e6f0ff'; color = '#0071e3'; }
-                                else if (cell.current && !availableDates.has(dateStr)) { color = '#c5c5c7'; }
+                                else if (isRange) { bg = '#e6f0ff'; color = hasData ? '#0071e3' : '#c5c5c7'; }
+                                else if (cell.current && !hasData) { color = '#c5c5c7'; }
 
                                 return (
                                   <div
