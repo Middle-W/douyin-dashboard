@@ -47,23 +47,15 @@ export default function DashboardPage() {
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const datePickerRef = useRef<HTMLDivElement>(null);
 
-  const loadAvailableDates = async (month: string) => {
-    try {
-      const [statsRes, costsRes] = await Promise.all([
-        fetch(`/api/data-stats?month=${month}&t=${Date.now()}`, { cache: 'no-store' }),
-        fetch(`/api/data-costs?month=${month}&t=${Date.now()}`, { cache: 'no-store' })
-      ]);
-      const statsJson = await statsRes.json();
-      const costsJson = await costsRes.json();
-      const dates = new Set<string>([
-        ...(statsJson.dates || []),
-        ...(costsJson.dates || [])
-      ]);
-      setAvailableDates(dates);
-    } catch (e) {
-      console.error('Load available dates error:', e);
-      setAvailableDates(new Set());
+  const normalizeDate = (val: any): string => {
+    if (!val) return '';
+    if (val instanceof Date) {
+      return `${val.getFullYear()}-${String(val.getMonth() + 1).padStart(2, '0')}-${String(val.getDate()).padStart(2, '0')}`;
     }
+    const s = String(val);
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    return s.includes('T') ? s.split('T')[0] : s.slice(0, 10);
   };
 
   const [showAvgCol, setShowAvgCol] = useState(() => {
@@ -299,10 +291,11 @@ export default function DashboardPage() {
         fetch(`/api/data-costs?month=${month2}&t=${Date.now()}`, { cache: 'no-store' })
       ]).then(async ([r1, r2, r3, r4]) => {
         const [j1, j2, j3, j4] = await Promise.all([r1.json(), r2.json(), r3.json(), r4.json()]);
-        const dates = new Set<string>([
+        const allDates = [
           ...(j1.dates || []), ...(j2.dates || []),
           ...(j3.dates || []), ...(j4.dates || [])
-        ]);
+        ];
+        const dates = new Set<string>(allDates.map(normalizeDate).filter(Boolean));
         setAvailableDates(dates);
       }).catch(() => setAvailableDates(new Set()));
     }
