@@ -74,17 +74,6 @@ export default function AdminPage() {
   const [editingData, setEditingData] = useState<any>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
-  // Windows scheduled tasks check state
-  const [taskCheck, setTaskCheck] = useState<{
-    loading: boolean;
-    tasks: Array<{ taskName: string; nextRunTime: string; status: string; lastRunTime: string }>;
-    error: string;
-  }>({
-    loading: false,
-    tasks: [],
-    error: ''
-  });
-
   // Data calendar picker
   const [showDataCalendar, setShowDataCalendar] = useState(false);
   const [dataCalMonth, setDataCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
@@ -107,27 +96,7 @@ export default function AdminPage() {
     finally { setLoading(false); }
   }, []);
 
-  const checkScheduledTasks = useCallback(async () => {
-    setTaskCheck(prev => ({ ...prev, loading: true, error: '' }));
-    try {
-      const res = await fetch('/api/scheduled-tasks?t=' + Date.now(), { cache: 'no-store' });
-      const json = await res.json();
-      if (json.error) throw new Error(json.error);
-      setTaskCheck({
-        loading: false,
-        tasks: json.tasks || [],
-        error: ''
-      });
-    } catch (e: any) {
-      setTaskCheck({
-        loading: false,
-        tasks: [],
-        error: e.message
-      });
-    }
-  }, []);
-
-  useEffect(() => { loadAccounts(); loadFields(); checkScheduledTasks(); }, [loadAccounts, loadFields, checkScheduledTasks]);
+  useEffect(() => { loadAccounts(); loadFields(); }, [loadAccounts, loadFields]);
 
   // Close calendar on outside click
   useEffect(() => {
@@ -429,69 +398,6 @@ export default function AdminPage() {
               </label>
             </div>
           ))}
-        </div>
-
-        {/* Windows Scheduled Tasks Check */}
-        <div style={{ background: 'white', borderRadius: 20, padding: 24, marginBottom: 20, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#1d1d1f' }}>⏰ 系统定时任务检查</h2>
-            <button
-              onClick={checkScheduledTasks}
-              disabled={taskCheck.loading}
-              style={{
-                padding: '8px 16px', borderRadius: 10, border: 'none',
-                background: taskCheck.loading ? '#94a3b8' : '#0071e3',
-                color: 'white', fontSize: 13, fontWeight: 600, cursor: taskCheck.loading ? 'not-allowed' : 'pointer'
-              }}
-            >
-              {taskCheck.loading ? '检查中...' : '🔄 刷新检查'}
-            </button>
-          </div>
-
-          {taskCheck.error && (
-            <div style={{ padding: 12, borderRadius: 8, background: '#fef2f2', color: '#dc2626', fontSize: 13, marginBottom: 12 }}>
-              ⚠️ {taskCheck.error}
-            </div>
-          )}
-
-          {taskCheck.tasks.length === 0 && !taskCheck.loading && !taskCheck.error && (
-            <div style={{ padding: 20, textAlign: 'center', color: '#86868b', fontSize: 13 }}>
-              未检测到定时任务
-            </div>
-          )}
-
-          {taskCheck.tasks.length > 0 && (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: '#f5f5f7' }}>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', fontWeight: 600, color: '#475569' }}>任务名称</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', fontWeight: 600, color: '#475569' }}>状态</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', fontWeight: 600, color: '#475569' }}>上次运行</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid #e2e8f0', fontWeight: 600, color: '#475569' }}>下次运行</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {taskCheck.tasks.map((task, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                      <td style={{ padding: '10px 12px', fontWeight: 500, color: '#1d1d1f' }}>{task.taskName}</td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{
-                          padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
-                          background: task.status === 'Ready' || task.status === '就绪' ? '#f0fdf4' : task.status === 'Running' || task.status === '正在运行' ? '#eff6ff' : '#fef2f2',
-                          color: task.status === 'Ready' || task.status === '就绪' ? '#16a34a' : task.status === 'Running' || task.status === '正在运行' ? '#2563eb' : '#dc2626'
-                        }}>
-                          {task.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px 12px', color: '#64748b' }}>{task.lastRunTime}</td>
-                      <td style={{ padding: '10px 12px', color: '#64748b' }}>{task.nextRunTime}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
 
         {/* Field Manager */}
