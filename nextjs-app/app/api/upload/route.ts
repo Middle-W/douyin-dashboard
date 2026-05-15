@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 
+export const maxDuration = 60;
+
 function safeParseDate(payTime: any): string | null {
   if (!payTime) return null;
   if (payTime instanceof Date) {
