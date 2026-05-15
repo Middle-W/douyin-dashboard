@@ -276,37 +276,19 @@ export default function DashboardPage() {
     }
   }, [showDatePicker]);
 
+  // Extract all dates with data from dashboard data
   useEffect(() => {
-    if (showDatePicker) {
-      const y = pickerMonth.getFullYear();
-      const m = pickerMonth.getMonth() + 1;
-      const month1 = `${y}-${String(m).padStart(2, '0')}`;
-      const nextM = m === 12 ? 1 : m + 1;
-      const nextY = m === 12 ? y + 1 : y;
-      const month2 = `${nextY}-${String(nextM).padStart(2, '0')}`;
-      Promise.all([
-        fetch(`/api/data-stats?month=${month1}&t=${Date.now()}`, { cache: 'no-store' }),
-        fetch(`/api/data-costs?month=${month1}&t=${Date.now()}`, { cache: 'no-store' }),
-        fetch(`/api/data-stats?month=${month2}&t=${Date.now()}`, { cache: 'no-store' }),
-        fetch(`/api/data-costs?month=${month2}&t=${Date.now()}`, { cache: 'no-store' })
-      ]).then(async ([r1, r2, r3, r4]) => {
-        const [j1, j2, j3, j4] = await Promise.all([r1.json(), r2.json(), r3.json(), r4.json()]);
-        console.log('[Calendar Debug] API raw:', {
-          statsMonth1: j1.dates?.slice(0, 5),
-          costsMonth1: j2.dates?.slice(0, 5),
-          statsMonth2: j3.dates?.slice(0, 5),
-          costsMonth2: j4.dates?.slice(0, 5)
-        });
-        const allDates = [
-          ...(j1.dates || []), ...(j2.dates || []),
-          ...(j3.dates || []), ...(j4.dates || [])
-        ];
-        const dates = new Set<string>(allDates.map(normalizeDate).filter(Boolean));
-        console.log('[Calendar Debug] availableDates:', [...dates].sort());
-        setAvailableDates(dates);
-      }).catch((e) => { console.error('[Calendar Debug] error:', e); setAvailableDates(new Set()); });
+    if (!data?.accounts) return;
+    const dates = new Set<string>();
+    for (const acc of data.accounts) {
+      for (const date of Object.keys(acc.daily || {})) {
+        if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          dates.add(date);
+        }
+      }
     }
-  }, [showDatePicker, pickerMonth]);
+    setAvailableDates(dates);
+  }, [data]);
 
   useEffect(() => {
     return () => {
