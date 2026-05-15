@@ -291,13 +291,20 @@ export default function DashboardPage() {
         fetch(`/api/data-costs?month=${month2}&t=${Date.now()}`, { cache: 'no-store' })
       ]).then(async ([r1, r2, r3, r4]) => {
         const [j1, j2, j3, j4] = await Promise.all([r1.json(), r2.json(), r3.json(), r4.json()]);
+        console.log('[Calendar Debug] API raw:', {
+          statsMonth1: j1.dates?.slice(0, 5),
+          costsMonth1: j2.dates?.slice(0, 5),
+          statsMonth2: j3.dates?.slice(0, 5),
+          costsMonth2: j4.dates?.slice(0, 5)
+        });
         const allDates = [
           ...(j1.dates || []), ...(j2.dates || []),
           ...(j3.dates || []), ...(j4.dates || [])
         ];
         const dates = new Set<string>(allDates.map(normalizeDate).filter(Boolean));
+        console.log('[Calendar Debug] availableDates:', [...dates].sort());
         setAvailableDates(dates);
-      }).catch(() => setAvailableDates(new Set()));
+      }).catch((e) => { console.error('[Calendar Debug] error:', e); setAvailableDates(new Set()); });
     }
   }, [showDatePicker, pickerMonth]);
 
