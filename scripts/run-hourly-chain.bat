@@ -26,12 +26,18 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-echo step 2/2 douboss >> C:\temp\douyin-logs\hourly-chain.log
+echo step 2/3 douboss >> C:\temp\douyin-logs\hourly-chain.log
 set API_URL=http://localhost:3000/api/import-daily-stats
 "C:\Program Files\nodejs\node.exe" fetch-douboss-hourly.js >> C:\temp\douyin-logs\hourly-chain.log 2>&1
 if %errorlevel% neq 0 (
     echo douboss failed >> C:\temp\douyin-logs\hourly-chain.log
     exit /b 1
+)
+
+echo step 3/3 profit report >> C:\temp\douyin-logs\hourly-chain.log
+"C:\Program Files\nodejs\node.exe" profit-report.js >> C:\temp\douyin-logs\hourly-chain.log 2>&1
+if %errorlevel% neq 0 (
+    echo profit report failed >> C:\temp\douyin-logs\hourly-chain.log
 )
 
 echo all done >> C:\temp\douyin-logs\hourly-chain.log

@@ -1,6 +1,9 @@
 (async()=>{
+  if(window.__doubossRunning){console.log('⚠️ 斗老板脚本已在运行中，请勿重复执行');return;}
+  window.__doubossRunning=true;
+  try{
   const API_URL=prompt('API地址:',localStorage.getItem('db_api_url')||'http://localhost:3000/api/import-daily-stats');
-  if(!API_URL)return;
+  if(!API_URL){window.__doubossRunning=false;return;}
   localStorage.setItem('db_api_url',API_URL);
 
   // ===== 日期获取：收集所有候选日期，让用户选择 =====
@@ -131,4 +134,5 @@
       alert(msg);
     }
   }catch(e){alert('❌网络错误:'+e.message)}
+  }finally{window.__doubossRunning=false;}
 })();

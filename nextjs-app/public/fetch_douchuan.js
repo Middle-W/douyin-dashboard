@@ -1,6 +1,9 @@
 (async()=>{
+  if(window.__douchuanRunning){console.log('⚠️ 抖船脚本已在运行中，请勿重复执行');return;}
+  window.__douchuanRunning=true;
+  try{
   const API_URL=prompt('API地址:',localStorage.getItem('dc_api_url')||'http://localhost:3000/api/import-cost-json');
-  if(!API_URL)return;
+  if(!API_URL){window.__douchuanRunning=false;return;}
   localStorage.setItem('dc_api_url',API_URL);
 
   let date='';
@@ -108,4 +111,5 @@
       alert('❌推送失败:'+json.error+(json.unmatched?'\n未匹配:'+json.unmatched.join(', '):''));
     }
   }catch(e){alert('❌网络错误:'+e.message)}
+  }finally{window.__douchuanRunning=false;}
 })();

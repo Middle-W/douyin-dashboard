@@ -63,6 +63,17 @@ export default function DashboardPage() {
   });
   const [sortDesc, setSortDesc] = useState(true);
   const [sortKey, setSortKey] = useState<'metric' | 'health'>('metric');
+
+  // 分页
+  const PAGE_SIZE_OPTIONS = [20, 40, 80, 120, 200];
+  const [pageSize, setPageSize] = useState(() => {
+    try { const s = parseInt(localStorage.getItem('dash_page_size') || '20'); return PAGE_SIZE_OPTIONS.includes(s) ? s : 20; } catch { return 20; }
+  });
+  const [pageNum, setPageNum] = useState(1);
+
+  // 排序/筛选/日期变化时重置到第一页
+  useEffect(() => { setPageNum(1); }, [sortKey, sortDesc, activeMetric, dateFrom, dateTo, JSON.stringify(dashFilters)]);
+
   const [showDailyReport, setShowDailyReport] = useState(() => {
     try { return localStorage.getItem('dash_show_report') !== 'false'; } catch { return true; }
   });
@@ -1174,6 +1185,57 @@ export default function DashboardPage() {
               <div style={{ width: 4, height: 24, borderRadius: 2, background: cfg.color }} />
               <span style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f' }}>账号明细（按{cfg.label}排序）</span>
             </div>
+            {/* Pagination Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <select
+                value={pageSize}
+                onChange={e => {
+                  const v = parseInt(e.target.value);
+                  setPageSize(v);
+                  setPageNum(1);
+                  try { localStorage.setItem('dash_page_size', String(v)); } catch {}
+                }}
+                style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 13, color: '#1d1d1f', background: '#fff', cursor: 'pointer', outline: 'none' }}
+              >
+                {PAGE_SIZE_OPTIONS.map(s => <option key={s} value={s}>{s}条/页</option>)}
+              </select>
+              <span style={{ fontSize: 13, color: '#86868b', whiteSpace: 'nowrap' }}>
+                共 {sortedAccounts.length} 条
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button
+                  onClick={() => setPageNum(v => Math.max(1, v - 1))}
+                  disabled={pageNum <= 1}
+                  style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 13, background: '#fff', color: pageNum <= 1 ? '#c7c7cc' : '#0071e3', cursor: pageNum <= 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  上一页
+                </button>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {Array.from({ length: Math.ceil(sortedAccounts.length / pageSize) }, (_, i) => i + 1).map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setPageNum(p)}
+                      style={{
+                        width: 32, height: 32, borderRadius: 8, border: '1px solid #d2d2d7',
+                        fontSize: 13, fontWeight: p === pageNum ? 700 : 400,
+                        background: p === pageNum ? '#0071e3' : '#fff',
+                        color: p === pageNum ? '#fff' : '#1d1d1f',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setPageNum(v => Math.min(Math.ceil(sortedAccounts.length / pageSize), v + 1))}
+                  disabled={pageNum >= Math.ceil(sortedAccounts.length / pageSize)}
+                  style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 13, background: '#fff', color: pageNum >= Math.ceil(sortedAccounts.length / pageSize) ? '#c7c7cc' : '#0071e3', cursor: pageNum >= Math.ceil(sortedAccounts.length / pageSize) ? 'not-allowed' : 'pointer' }}
+                >
+                  下一页
+                </button>
+              </div>
+            </div>
           </div>
           <div style={{ overflowX: 'auto', padding: '0 4px 16px' }}>
             <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: 13 }}>
@@ -1206,12 +1268,18 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {sortedAccounts.map((a: any, i: number) => {
-                  const maxVal = Math.max(...displayDates.map(d => getDailyMetric(a.daily?.[d], activeMetric)), 1);
-                  const avgVal = activeMetric === 'orders' ? (a._avgDaily || 0) : (getDisplayMetricValue(a, activeMetric) / (displayDates.length || 1));
-                  return (
-                    <tr key={a.account} style={{ background: i % 2 === 1 ? '#fafafa' : '#ffffff', transition: 'background 0.12s' }} onMouseEnter={e => (e.currentTarget.style.background = '#f5f5f7')} onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 1 ? '#fafafa' : '#ffffff')}>
-                      <td style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', fontWeight: 600, color: '#86868b', fontSize: 12 }}>{i + 1}</td>
+                {(() => {
+                  const totalPages = Math.max(1, Math.ceil(sortedAccounts.length / pageSize));
+                  const safePage = Math.min(pageNum, totalPages);
+                  const startIdx = (safePage - 1) * pageSize;
+                  const paginated = sortedAccounts.slice(startIdx, startIdx + pageSize);
+                  return paginated.map((a: any, i: number) => {
+                    const globalIndex = startIdx + i;
+                    const maxVal = Math.max(...displayDates.map(d => getDailyMetric(a.daily?.[d], activeMetric)), 1);
+                    const avgVal = activeMetric === 'orders' ? (a._avgDaily || 0) : (getDisplayMetricValue(a, activeMetric) / (displayDates.length || 1));
+                    return (
+                      <tr key={a.account} style={{ background: globalIndex % 2 === 1 ? '#fafafa' : '#ffffff', transition: 'background 0.12s' }} onMouseEnter={e => (e.currentTarget.style.background = '#f5f5f7')} onMouseLeave={e => (e.currentTarget.style.background = globalIndex % 2 === 1 ? '#fafafa' : '#ffffff')}>
+                        <td style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', fontWeight: 600, color: '#86868b', fontSize: 12 }}>{globalIndex + 1}</td>
                       <td style={{ padding: '10px 8px', borderBottom: '1px solid #f0f0f0', fontWeight: 600, color: '#1d1d1f', width: 100 }}>{a.account}</td>
                       <td style={{ padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid #f0f0f0', position: 'relative' }}>
                         <div
@@ -1303,9 +1371,58 @@ export default function DashboardPage() {
                       })}
                     </tr>
                   );
-                })}
+                });
+              })()}
               </tbody>
             </table>
+            {/* Bottom Pagination */}
+            {sortedAccounts.length > pageSize && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: '16px 0 8px' }}>
+                <button
+                  onClick={() => setPageNum(v => Math.max(1, v - 1))}
+                  disabled={pageNum <= 1}
+                  style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 13, background: '#fff', color: pageNum <= 1 ? '#c7c7cc' : '#0071e3', cursor: pageNum <= 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  上一页
+                </button>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {Array.from({ length: Math.ceil(sortedAccounts.length / pageSize) }, (_, i) => i + 1).map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setPageNum(p)}
+                      style={{
+                        width: 32, height: 32, borderRadius: 8, border: '1px solid #d2d2d7',
+                        fontSize: 13, fontWeight: p === pageNum ? 700 : 400,
+                        background: p === pageNum ? '#0071e3' : '#fff',
+                        color: p === pageNum ? '#fff' : '#1d1d1f',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setPageNum(v => Math.min(Math.ceil(sortedAccounts.length / pageSize), v + 1))}
+                  disabled={pageNum >= Math.ceil(sortedAccounts.length / pageSize)}
+                  style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 13, background: '#fff', color: pageNum >= Math.ceil(sortedAccounts.length / pageSize) ? '#c7c7cc' : '#0071e3', cursor: pageNum >= Math.ceil(sortedAccounts.length / pageSize) ? 'not-allowed' : 'pointer' }}
+                >
+                  下一页
+                </button>
+                <select
+                  value={pageSize}
+                  onChange={e => {
+                    const v = parseInt(e.target.value);
+                    setPageSize(v);
+                    setPageNum(1);
+                    try { localStorage.setItem('dash_page_size', String(v)); } catch {}
+                  }}
+                  style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 13, color: '#1d1d1f', background: '#fff', cursor: 'pointer', outline: 'none' }}
+                >
+                  {PAGE_SIZE_OPTIONS.map(s => <option key={s} value={s}>{s}条/页</option>)}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
