@@ -63,6 +63,9 @@ async function batchUpsert(table: string, records: any[], onConflict: string, ba
 
 export async function POST(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const isPreview = searchParams.get('preview') === '1';
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     if (!file) {
@@ -168,6 +171,25 @@ export async function POST(request: NextRequest) {
     const sortedDates = Array.from(allDates).sort();
     const dateFrom = sortedDates[0];
     const dateTo = sortedDates[sortedDates.length - 1];
+
+    // Preview mode: return match summary without writing to DB
+    if (isPreview) {
+      const existingNames = new Set((existingAccounts || []).map((a: any) => a.name));
+      const matched = accountList.filter((a: any) => existingNames.has(a.name));
+      const unmatched = accountList.filter((a: any) => !existingNames.has(a.name));
+      return NextResponse.json({
+        preview: true,
+        totalRows: rows.length - 1,
+        totalAccounts: accountList.length,
+        matchedCount: matched.length,
+        unmatchedCount: unmatched.length,
+        matchedAccounts: matched.map((a: any) => a.name),
+        newAccounts: unmatched.map((a: any) => a.name),
+        dateRange: { from: dateFrom, to: dateTo },
+        skippedRefund,
+        skippedEmpty
+      });
+    }
 
     // Debug: log parsed date distribution
     console.log('Upload parsed dates:', sortedDates);

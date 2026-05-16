@@ -80,6 +80,11 @@ export default function AdminPage() {
   const [availableDates, setAvailableDates] = useState<Set<string>>(new Set());
   const dataCalendarRef = useRef<HTMLDivElement>(null);
 
+  // Upload preview
+  const [uploadPreview, setUploadPreview] = useState<any>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [pendingUpload, setPendingUpload] = useState<{ api: string; file: File; label: string } | null>(null);
+
   const loadAvailableDates = async (tab: 'stats'|'costs', month: string) => {
     try {
       const api = tab === 'stats' ? '/api/data-stats' : '/api/data-costs';
@@ -156,22 +161,45 @@ export default function AdminPage() {
       return ca.localeCompare(cb, 'zh-CN');
     });
 
-  const uploadFile = async (api: string, file: File, label: string) => {
+  const uploadFile = async (api: string, file: File, label: string, skipPreview = false) => {
     setMessage('');
     // 文件大小检查（Vercel Hobby 限制 4.5MB）
     if (file.size > 4.5 * 1024 * 1024) {
       setMessage(`文件太大 (${(file.size / 1024 / 1024).toFixed(1)}MB)，请拆分成小文件上传（单文件不超过 4MB）`);
       return;
     }
+
+    // 订单和消耗数据先走预览
+    if (!skipPreview && (api === '/api/upload' || api === '/api/upload-cost')) {
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const res = await fetch(`${api}?preview=1`, { method: 'POST', body: formData });
+        const contentType = res.headers.get('content-type') || '';
+        if (!res.ok || !contentType.includes('application/json')) {
+          const text = await res.text();
+          throw new Error(`预览失败 (${res.status}): ${text.slice(0, 200)}`);
+        }
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        setUploadPreview({ ...json, label });
+        setPendingUpload({ api, file, label });
+        setShowPreviewModal(true);
+        return;
+      } catch (err: any) {
+        setMessage(err.message);
+        return;
+      }
+    }
+
+    // 正常上传（账号信息 或 确认后的订单/消耗）
     try {
       const formData = new FormData();
       formData.append('file', file);
       const res = await fetch(api, { method: 'POST', body: formData });
-      // 检查响应是否为 JSON
       const contentType = res.headers.get('content-type') || '';
       if (!res.ok || !contentType.includes('application/json')) {
         const text = await res.text();
-        // 尝试提取有用的错误信息
         const errorHint = text.includes('Entity Too Large') || text.includes('too large')
           ? '文件太大，请拆分成小文件上传'
           : text.includes('timeout') || text.includes('TIMEOUT')
@@ -184,6 +212,16 @@ export default function AdminPage() {
       setMessage(`${label} 上传成功` + (json.updated ? `，更新 ${json.updated} 条` : json.records ? `，共 ${json.records} 条` : ''));
       if (api === '/api/upload-meta') loadAccounts();
     } catch (err: any) { setMessage(err.message); }
+  };
+
+  const confirmUpload = async () => {
+    if (!pendingUpload) return;
+    setShowPreviewModal(false);
+    const { api, file, label } = pendingUpload;
+    setPendingUpload(null);
+    setUploadPreview(null);
+    // 直接走上传逻辑，跳过预览
+    await uploadFile(api, file, label, true);
   };
 
   const addField = async () => {
@@ -799,6 +837,93 @@ export default function AdminPage() {
       {/* Edit Modal */}
       {modalOpen && (
         <EditModal account={editingAccount} fields={fields} getLabel={getLabel} onSave={saveAccount} onClose={() => setModalOpen(false)} />
+      )}
+
+      {/* Upload Preview Modal */}
+      {showPreviewModal && uploadPreview && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => { setShowPreviewModal(false); setPendingUpload(null); }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: 28, width: 520, maxWidth: '90vw', maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>📋 {uploadPreview.label} - 上传预览</h2>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div style={{ background: '#f5f5f7', borderRadius: 10, padding: 12 }}>
+                <div style={{ fontSize: 12, color: '#86868b' }}>Excel 总行数</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#1d1d1f' }}>{uploadPreview.totalRows || 0}</div>
+              </div>
+              <div style={{ background: '#f5f5f7', borderRadius: 10, padding: 12 }}>
+                <div style={{ fontSize: 12, color: '#86868b' }}>识别到账号数</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#1d1d1f' }}>{uploadPreview.totalAccounts || uploadPreview.matchedCount + uploadPreview.unmatchedCount || 0}</div>
+              </div>
+              <div style={{ background: '#e8f5e9', borderRadius: 10, padding: 12 }}>
+                <div style={{ fontSize: 12, color: '#2e7d32' }}>✅ 匹配成功</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: '#2e7d32' }}>{uploadPreview.matchedCount || 0}</div>
+              </div>
+              <div style={{ background: uploadPreview.unmatchedCount > 0 ? '#ffebee' : '#e8f5e9', borderRadius: 10, padding: 12 }}>
+                <div style={{ fontSize: 12, color: uploadPreview.unmatchedCount > 0 ? '#c62828' : '#2e7d32' }}>{uploadPreview.unmatchedCount > 0 ? '⚠️ 匹配不上' : '✅ 全部匹配'}</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: uploadPreview.unmatchedCount > 0 ? '#c62828' : '#2e7d32' }}>{uploadPreview.unmatchedCount || 0}</div>
+              </div>
+            </div>
+
+            {uploadPreview.dateRange && (
+              <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12, padding: '8px 12px', background: '#f8fafc', borderRadius: 8 }}>
+                日期范围：{uploadPreview.dateRange.from} ~ {uploadPreview.dateRange.to}
+              </div>
+            )}
+            {uploadPreview.dateCols && (
+              <div style={{ fontSize: 13, color: '#64748b', marginBottom: 12, padding: '8px 12px', background: '#f8fafc', borderRadius: 8 }}>
+                识别到 {uploadPreview.dateCols.length} 个日期列：{uploadPreview.dateCols.slice(0, 3).join('、')}{uploadPreview.dateCols.length > 3 ? '...' : ''}
+              </div>
+            )}
+
+            {uploadPreview.newAccounts && uploadPreview.newAccounts.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#c62828', marginBottom: 6 }}>🆕 将创建的新账号（{uploadPreview.newAccounts.length} 个）</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {uploadPreview.newAccounts.map((name: string) => (
+                    <span key={name} style={{ padding: '4px 10px', borderRadius: 6, background: '#ffebee', color: '#c62828', fontSize: 12, border: '1px solid #ffcdd2' }}>{name}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {uploadPreview.unmatchedAccounts && uploadPreview.unmatchedAccounts.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#c62828', marginBottom: 6 }}>❌ 匹配不上的账号（数据将被丢弃，{uploadPreview.unmatchedAccounts.length} 个）</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {uploadPreview.unmatchedAccounts.map((name: string) => (
+                    <span key={name} style={{ padding: '4px 10px', borderRadius: 6, background: '#ffebee', color: '#c62828', fontSize: 12, border: '1px solid #ffcdd2' }}>{name}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {uploadPreview.matchedAccounts && uploadPreview.matchedAccounts.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#2e7d32', marginBottom: 6 }}>✅ 匹配成功的账号（{uploadPreview.matchedAccounts.length} 个）</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {uploadPreview.matchedAccounts.slice(0, 20).map((name: string) => (
+                    <span key={name} style={{ padding: '4px 10px', borderRadius: 6, background: '#e8f5e9', color: '#2e7d32', fontSize: 12, border: '1px solid #c8e6c9' }}>{name}</span>
+                  ))}
+                  {uploadPreview.matchedAccounts.length > 20 && (
+                    <span style={{ padding: '4px 10px', borderRadius: 6, background: '#e8f5e9', color: '#2e7d32', fontSize: 12 }}>+{uploadPreview.matchedAccounts.length - 20} 个</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {uploadPreview.skippedRefund > 0 && (
+              <div style={{ fontSize: 12, color: '#86868b', marginBottom: 8 }}>已过滤退款订单：{uploadPreview.skippedRefund} 条</div>
+            )}
+            {uploadPreview.skippedEmpty > 0 && (
+              <div style={{ fontSize: 12, color: '#86868b', marginBottom: 8 }}>已过滤空行/无效行：{uploadPreview.skippedEmpty} 条</div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button onClick={confirmUpload} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>确认上传</button>
+              <button onClick={() => { setShowPreviewModal(false); setPendingUpload(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e8e8ed', background: 'white', fontSize: 14, cursor: 'pointer', color: '#1d1d1f' }}>取消</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   </div>

@@ -4,6 +4,9 @@ import * as XLSX from 'xlsx';
 
 export async function POST(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const isPreview = searchParams.get('preview') === '1';
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     if (!file) {
@@ -48,6 +51,7 @@ export async function POST(request: NextRequest) {
 
     const nameMap: Record<string, string> = {};
     const unmatched: string[] = [];
+    const matchDetails: Record<string, { raw: string; matched: string; type: 'exact' | 'prefix' }> = {};
 
     const costs: any[] = [];
     for (let i = 1; i < rows.length; i++) {
@@ -57,21 +61,30 @@ export async function POST(request: NextRequest) {
 
       // Resolve name: exact match first, then prefix match
       let resolvedName = nameMap[rawName];
+      let matchType: 'exact' | 'prefix' | null = null;
       if (!resolvedName) {
         if (accountNames.includes(rawName)) {
           resolvedName = rawName;
+          matchType = 'exact';
         } else {
           const prefixMatch = accountNames.find(n => n.startsWith(rawName));
           if (prefixMatch) {
             resolvedName = prefixMatch;
+            matchType = 'prefix';
           }
         }
         nameMap[rawName] = resolvedName || '';
+      } else {
+        matchType = accountNames.includes(rawName) ? 'exact' : 'prefix';
       }
 
       if (!resolvedName) {
         if (!unmatched.includes(rawName)) unmatched.push(rawName);
         continue;
+      }
+
+      if (!matchDetails[resolvedName]) {
+        matchDetails[resolvedName] = { raw: rawName, matched: resolvedName, type: matchType! };
       }
 
       for (const dc of dateCols) {
@@ -88,6 +101,20 @@ export async function POST(request: NextRequest) {
 
     if (costs.length === 0) {
       return NextResponse.json({ error: 'No cost data found', unmatched }, { status: 400 });
+    }
+
+    // Preview mode: return match summary without writing to DB
+    if (isPreview) {
+      return NextResponse.json({
+        preview: true,
+        totalRows: rows.length - 1,
+        dateCols: dateCols.map(d => d.date),
+        matchedCount: Object.keys(matchDetails).length,
+        unmatchedCount: unmatched.length,
+        matchedAccounts: Object.values(matchDetails),
+        unmatchedAccounts: unmatched,
+        totalRecords: costs.length
+      });
     }
 
     const { error } = await supabaseAdmin
