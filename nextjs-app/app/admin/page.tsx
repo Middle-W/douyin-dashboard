@@ -795,7 +795,7 @@ export default function AdminPage() {
               <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, zIndex: 100, background: 'white', padding: 16, borderRadius: 16, boxShadow: '0 20px 60px rgba(0,0,0,0.12)', width: 280, border: '1px solid #f1f5f9', userSelect: 'none' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                   <button onClick={(e) => { e.stopPropagation(); setDataCalMonth(new Date(dataCalMonth.getFullYear(), dataCalMonth.getMonth() - 1)); }} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666', padding: '4px 10px', borderRadius: 6 }}>‹</button>
-                  <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>{dataCalMonth.getFullYear()}年{dataCalMonth.getMonth() + 1}月</span>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>{dataCalMonth.getFullYear()}年{dataCalMonth.getMonth() + 1}月 {datesLoading ? '(加载中...)' : availableDates.size > 0 ? `(${availableDates.size}天有数据)` : ''}</span>
                   <button onClick={(e) => { e.stopPropagation(); setDataCalMonth(new Date(dataCalMonth.getFullYear(), dataCalMonth.getMonth() + 1)); }} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#666', padding: '4px 10px', borderRadius: 6 }}>›</button>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 2 }}>
@@ -811,8 +811,10 @@ export default function AdminPage() {
                     const dateStr = fmtYMD(cell.date.getFullYear(), cell.date.getMonth(), cell.date.getDate());
                     let bg = 'transparent';
                     let color = cell.current ? '#1d1d1f' : '#c5c5c7';
+                    const hasData = !datesLoading && availableDates.has(dateStr);
                     if (isSelected) { bg = '#0071e3'; color = 'white'; }
-                    else if (cell.current && !datesLoading && !availableDates.has(dateStr)) { color = '#c5c5c7'; }
+                    else if (cell.current && !hasData) { color = '#c5c5c7'; }
+                    else if (cell.current && hasData) { bg = '#e8f5e9'; }
                     return (
                       <div
                         key={idx}
@@ -820,6 +822,9 @@ export default function AdminPage() {
                         style={{ textAlign: 'center', padding: '6px 0', fontSize: 13, cursor: 'pointer', borderRadius: 4, background: bg, color, fontWeight: isToday ? 700 : 400, position: 'relative' }}
                       >
                         {cell.date.getDate()}
+                        {hasData && !isSelected && (
+                          <div style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: '#34c759' }} />
+                        )}
                         {isToday && !isSelected && (
                           <div style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: '#0071e3' }} />
                         )}
