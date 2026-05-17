@@ -91,16 +91,22 @@ export default function AdminPage() {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [pendingUpload, setPendingUpload] = useState<{ api: string; file: File; label: string } | null>(null);
 
+  const [datesLoading, setDatesLoading] = useState(false);
+
   const loadAvailableDates = async (tab: 'stats'|'costs', month: string) => {
+    setDatesLoading(true);
     try {
       const api = tab === 'stats' ? '/api/data-stats' : '/api/data-costs';
       const res = await fetch(`${api}?month=${month}&t=${Date.now()}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       if (json.error) throw new Error(json.error);
       setAvailableDates(new Set(json.dates || []));
     } catch (e) {
       console.error('Load available dates error:', e);
       setAvailableDates(new Set());
+    } finally {
+      setDatesLoading(false);
     }
   };
 
@@ -806,7 +812,7 @@ export default function AdminPage() {
                     let bg = 'transparent';
                     let color = cell.current ? '#1d1d1f' : '#c5c5c7';
                     if (isSelected) { bg = '#0071e3'; color = 'white'; }
-                    else if (cell.current && !availableDates.has(dateStr)) { color = '#c5c5c7'; }
+                    else if (cell.current && !datesLoading && !availableDates.has(dateStr)) { color = '#c5c5c7'; }
                     return (
                       <div
                         key={idx}
