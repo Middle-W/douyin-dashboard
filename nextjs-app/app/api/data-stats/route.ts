@@ -23,16 +23,28 @@ export async function GET(request: NextRequest) {
 
     if (month && /^\d{4}-\d{2}$/.test(month)) {
       const [y, m] = month.split('-').map(Number);
-      const nextMonth = `${y}-${String(m + 1).padStart(2, '0')}-01`;
       const monthEnd = new Date(y, m, 0);
       const endStr = `${monthEnd.getFullYear()}-${String(monthEnd.getMonth() + 1).padStart(2, '0')}-${String(monthEnd.getDate()).padStart(2, '0')}`;
-      const { data, error } = await supabaseAdmin
-        .from('daily_stats')
-        .select('date')
-        .gte('date', `${month}-01`)
-        .lte('date', endStr)
-        .order('date');
-      if (error) throw error;
+      
+      // Supabase 默认限制1000行，需要分页获取所有日期的唯一值
+      let allDates: string[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await supabaseAdmin
+          .from('daily_stats')
+          .select('date')
+          .gte('date', `${month}-01`)
+          .lte('date', endStr)
+          .order('date')
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allDates = allDates.concat(data.map((d: any) => d.date));
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
+      
       const normalizeDate = (val: any): string => {
         if (!val) return '';
         if (val instanceof Date) {
@@ -43,7 +55,7 @@ export async function GET(request: NextRequest) {
         if (m) return `${m[1]}-${m[2]}-${m[3]}`;
         return s.includes('T') ? s.split('T')[0] : s.slice(0, 10);
       };
-      const dates = [...new Set((data || []).map((d: any) => normalizeDate(d.date)))];
+      const dates = [...new Set(allDates.map((d: any) => normalizeDate(d)))];
       return NextResponse.json({ dates }, { headers: corsHeaders });
     }
 
