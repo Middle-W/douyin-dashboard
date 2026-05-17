@@ -814,7 +814,6 @@ export default function AdminPage() {
                     const hasData = !datesLoading && availableDates.has(dateStr);
                     if (isSelected) { bg = '#0071e3'; color = 'white'; }
                     else if (cell.current && !hasData) { color = '#c5c5c7'; }
-                    else if (cell.current && hasData) { bg = '#e8f5e9'; }
                     return (
                       <div
                         key={idx}
@@ -822,9 +821,6 @@ export default function AdminPage() {
                         style={{ textAlign: 'center', padding: '6px 0', fontSize: 13, cursor: 'pointer', borderRadius: 4, background: bg, color, fontWeight: isToday ? 700 : 400, position: 'relative' }}
                       >
                         {cell.date.getDate()}
-                        {hasData && !isSelected && (
-                          <div style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: '#34c759' }} />
-                        )}
                         {isToday && !isSelected && (
                           <div style={{ position: 'absolute', bottom: 2, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: '#0071e3' }} />
                         )}
