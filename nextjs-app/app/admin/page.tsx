@@ -59,6 +59,12 @@ export default function AdminPage() {
   const [filterField, setFilterField] = useState('');
   const [filterValue, setFilterValue] = useState('');
 
+  // 账号列表分页
+  const PAGE_SIZE_OPTIONS = [20, 40, 80, 120, 200];
+  const [pageSize, setPageSize] = useState(20);
+  const [pageNum, setPageNum] = useState(1);
+  useEffect(() => { setPageNum(1); }, [pageSize, search, filterField, filterValue]);
+
   // Field manager state
   const [newFieldKey, setNewFieldKey] = useState('');
   const [newFieldLabel, setNewFieldLabel] = useState('');
@@ -160,6 +166,11 @@ export default function AdminPage() {
       const cb = String(b.code || '').trim() || String(b.name || '').trim();
       return ca.localeCompare(cb, 'zh-CN');
     });
+
+  // 分页计算
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(pageNum, totalPages);
+  const paginated = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   const uploadFile = async (api: string, file: File, label: string, skipPreview = false) => {
     setMessage('');
@@ -589,6 +600,55 @@ export default function AdminPage() {
           )}
         </div>
 
+        {/* 分页控制栏 */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e2e8f0', background: '#fafafa' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <select
+              value={pageSize}
+              onChange={e => setPageSize(Number(e.target.value))}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 13, background: '#fff', color: '#1d1d1f', cursor: 'pointer' }}
+            >
+              {PAGE_SIZE_OPTIONS.map(s => <option key={s} value={s}>{s}条/页</option>)}
+            </select>
+            <span style={{ fontSize: 13, color: '#86868b', whiteSpace: 'nowrap' }}>
+              共 {filtered.length} 条
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              onClick={() => setPageNum(v => Math.max(1, v - 1))}
+              disabled={pageNum <= 1}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 13, background: '#fff', color: pageNum <= 1 ? '#c7c7cc' : '#0071e3', cursor: pageNum <= 1 ? 'not-allowed' : 'pointer' }}
+            >
+              上一页
+            </button>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setPageNum(p)}
+                  style={{
+                    width: 32, height: 32, borderRadius: 8, border: '1px solid #d2d2d7',
+                    fontSize: 13, fontWeight: p === pageNum ? 700 : 400,
+                    background: p === pageNum ? '#0071e3' : '#fff',
+                    color: p === pageNum ? '#fff' : '#1d1d1f',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setPageNum(v => Math.min(totalPages, v + 1))}
+              disabled={pageNum >= totalPages}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 13, background: '#fff', color: pageNum >= totalPages ? '#c7c7cc' : '#0071e3', cursor: pageNum >= totalPages ? 'not-allowed' : 'pointer' }}
+            >
+              下一页
+            </button>
+          </div>
+        </div>
+
         {loading ? <div style={{ textAlign: 'center', padding: 40 }}>加载中...</div> :
          error ? <div style={{ textAlign: 'center', padding: 40, color: '#ef4444' }}>错误: {error}</div> : (
           <div style={{ background: 'white', borderRadius: 20, boxShadow: '0 4px 24px rgba(0,0,0,0.04)', overflow: 'hidden', overflowX: 'auto' }}>
@@ -623,7 +683,7 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(acc => (
+                {paginated.map(acc => (
                   <tr key={acc.name} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '12px 8px', textAlign: 'center' }}>
                       <input type="checkbox"
@@ -655,6 +715,42 @@ export default function AdminPage() {
                 ))}
               </tbody>
             </table>
+            {/* 底部分页 */}
+            {filtered.length > pageSize && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, padding: '12px 0 8px', borderTop: '1px solid #f1f5f9' }}>
+                <button
+                  onClick={() => setPageNum(v => Math.max(1, v - 1))}
+                  disabled={pageNum <= 1}
+                  style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 13, background: '#fff', color: pageNum <= 1 ? '#c7c7cc' : '#0071e3', cursor: pageNum <= 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  上一页
+                </button>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setPageNum(p)}
+                      style={{
+                        width: 32, height: 32, borderRadius: 8, border: '1px solid #d2d2d7',
+                        fontSize: 13, fontWeight: p === pageNum ? 700 : 400,
+                        background: p === pageNum ? '#0071e3' : '#fff',
+                        color: p === pageNum ? '#fff' : '#1d1d1f',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setPageNum(v => Math.min(totalPages, v + 1))}
+                  disabled={pageNum >= totalPages}
+                  style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 13, background: '#fff', color: pageNum >= totalPages ? '#c7c7cc' : '#0071e3', cursor: pageNum >= totalPages ? 'not-allowed' : 'pointer' }}
+                >
+                  下一页
+                </button>
+              </div>
+            )}
             {filtered.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>没有找到匹配的账号</div>}
           </div>
         )}
