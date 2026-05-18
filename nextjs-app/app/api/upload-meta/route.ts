@@ -3,38 +3,29 @@ import { supabaseAdmin } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 
 /**
- * 将中文表头转换为安全的字段key（英文标识）
- * 保留常见映射，未知列转为拼音或清理后的英文名
+ * 已知accounts表字段映射
+ * 不在此列表的字段 -> 放到metadata JSONB
  */
-const HEADER_MAP: Record<string, string> = {
-  '账号名称': 'name',
-  '抖音名称': 'name',
-  '名称': 'name',
-  '类型': 'account_type',
-  '账号类型': 'account_type',
-  '状态': 'status',
-  '账号状态': 'status',
-  '选品人': 'buyer',
-  '买家': 'buyer',
-  '编号': 'code',
-  'code': 'code',
-  '备注': 'remark',
-  'remark': 'remark',
-  '运营人': 'operator',
-  'operator': 'operator',
-  '备用': 'operator',
-};
+const KNOWN_COLUMNS = new Set([
+  'name', 'account_type', 'status', 'buyer', 'code', 'remark', 'operator',
+  'metadata', 'id', 'created_at', 'updated_at'
+]);
 
 function getFieldKey(header: string): string {
   const h = header.trim();
-  // 常见映射
-  if (HEADER_MAP[h]) return HEADER_MAP[h];
-  // 清理为安全的key：去掉空格和特殊字符，转为小写
-  return h.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_').toLowerCase();
+  const map: Record<string, string> = {
+    '账号名称': 'name', '抖音名称': 'name', '名称': 'name',
+    '类型': 'account_type', '账号类型': 'account_type',
+    '状态': 'status', '账号状态': 'status',
+    '选品人': 'buyer', '买家': 'buyer',
+    '编号': 'code', 'code': 'code',
+    '备注': 'remark', 'remark': 'remark',
+    '运营人': 'operator', 'operator': 'operator', '备用': 'operator',
+  };
+  return map[h] || h.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_').toLowerCase();
 }
 
 async function ensureFields(headers: string[]) {
-  // 获取现有字段
   const { data: existing } = await supabaseAdmin.from('account_fields').select('key, label');
   const existingKeys = new Set((existing || []).map(f => f.key));
 
@@ -43,7 +34,7 @@ async function ensureFields(headers: string[]) {
 
   for (const h of headers) {
     const key = getFieldKey(h);
-    if (key === 'name') continue; // name 是主键，不放入 account_fields
+    if (key === 'name') continue;
     if (!existingKeys.has(key)) {
       toInsert.push({
         key,
@@ -58,11 +49,8 @@ async function ensureFields(headers: string[]) {
 
   if (toInsert.length > 0) {
     const { error } = await supabaseAdmin.from('account_fields').insert(toInsert);
-    if (error) {
-      console.error('Insert fields error:', error);
-    } else {
-      console.log('Inserted fields:', toInsert.map(f => f.key).join(', '));
-    }
+    if (error) console.error('Insert fields error:', error);
+    else console.log('Inserted fields:', toInsert.map(f => f.key).join(', '));
   }
 }
 
@@ -92,14 +80,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `第一列必须是"账号名称"，当前是"${headers[0]}"`, status: 400 });
     }
 
-    // 根据表头动态创建字段
+    // 根据表头动态创建account_fields配置
     await ensureFields(headers);
-
-    // 构建列索引
-    const colMap: Record<string, number> = {};
-    headers.forEach((h, i) => {
-      colMap[getFieldKey(h)] = i;
-    });
 
     // 解析数据
     const recordMap = new Map<string, any>();
@@ -109,15 +91,25 @@ export async function POST(request: NextRequest) {
       if (!name) continue;
 
       const record: any = { name };
+      const metadata: Record<string, string> = {};
 
-      // 遍历所有列
       for (let colIdx = 1; colIdx < headers.length; colIdx++) {
         const header = headers[colIdx];
         const key = getFieldKey(header);
         const val = row[colIdx];
         if (val !== undefined && val !== null && String(val).trim() !== '') {
-          record[key] = String(val).trim();
+          const strVal = String(val).trim();
+          // 已知列直接放入record，未知列放入metadata
+          if (KNOWN_COLUMNS.has(key)) {
+            record[key] = strVal;
+          } else {
+            metadata[key] = strVal;
+          }
         }
+      }
+
+      if (Object.keys(metadata).length > 0) {
+        record.metadata = metadata;
       }
 
       recordMap.set(name, record);

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-interface Account { [key: string]: string | number; }
+interface Account { [key: string]: any; metadata?: Record<string, string>; }
 interface FieldDef { id: number; key: string; label: string; show_in_admin: boolean; show_in_dashboard: boolean; is_system: boolean; sort_order: number; }
 
 function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
@@ -782,8 +782,8 @@ export default function AdminPage() {
                     {adminFields.map(f => (
                       <td key={f.key} style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
                         {f.key === 'account_type'
-                          ? <span style={{ padding: '2px 10px', borderRadius: 12, background: '#eef2ff', color: '#4f46e5', fontSize: 12, fontWeight: 500 }}>{acc[f.key] || '-'}</span>
-                          : (acc[f.key] || '-')}
+                          ? <span style={{ padding: '2px 10px', borderRadius: 12, background: '#eef2ff', color: '#4f46e5', fontSize: 12, fontWeight: 500 }}>{acc[f.key] || acc.metadata?.[f.key] || '-'}</span>
+                          : (acc[f.key] || acc.metadata?.[f.key] || '-')}
                       </td>
                     ))}
                     <td style={{ padding: '12px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
@@ -1309,7 +1309,7 @@ function EditModal({ account, fields, getLabel, onSave, onClose }: {
 
   useEffect(() => {
     const init: Record<string, string> = {};
-    fields.forEach(f => { init[f.key] = account ? String(account[f.key] || '') : ''; });
+    fields.forEach(f => { init[f.key] = account ? String(account[f.key] || account.metadata?.[f.key] || '') : ''; });
     // Also include any extra keys from account
     if (account) Object.keys(account).forEach(k => { if (!(k in init)) init[k] = String(account[k] || ''); });
     setForm(init);
