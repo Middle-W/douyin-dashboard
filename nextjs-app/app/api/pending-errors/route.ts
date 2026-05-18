@@ -147,7 +147,6 @@ export async function POST(request: NextRequest) {
       // 根据类型入库
       const { type, date } = content;
       if (type === 'stats') {
-        // 获取现有记录保留 income/amount
         const { data: existingRecords } = await supabaseAdmin
           .from('daily_stats')
           .select('account_name, income, amount')
@@ -208,4 +207,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
-

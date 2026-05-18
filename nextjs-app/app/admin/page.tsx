@@ -506,7 +506,7 @@ export default function AdminPage() {
       <div style={{ background: '#ffffff', color: '#1d1d1f', padding: '24px', borderBottom: '1px solid #e8e8ed' }}>
         <div style={{ maxWidth: 1600, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h1 style={{ fontSize: 24, margin: '0 0 4px', fontWeight: 700, letterSpacing: '-0.02em' }}>账号管理后台</h1>
+            <h1 style={{ fontSize: 24, margin: '0 0 4px', fontWeight: 700, letterSpacing: '-0.02em' }}>账号管理后台 - 公司版</h1>
             <div style={{ fontSize: 13, color: '#86868b' }}>共 {accounts.length} 个账号 | {fields.length} 个字段</div>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
