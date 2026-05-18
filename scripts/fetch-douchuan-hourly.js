@@ -15,7 +15,7 @@ const STATE_FILE = path.join(__dirname, '.douchuan-state-company.json');
 const CONFIG = {
   douchuanUrl: 'https://dy.douchuanec.com/#/qy_balance',
   apiUrl: process.env.API_URL || 'http://localhost:3000/api/import-cost-json',
-  date: process.env.FETCH_DATE || getToday(),
+  date: (process.env.FETCH_DATE || getToday()).trim(),
   chromePath: process.env.CHROME_PATH || findChrome(),
   headless: process.env.HEADLESS === 'true',
   pageDelay: 5000,
@@ -30,6 +30,13 @@ function getToday() {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
@@ -278,17 +285,82 @@ async function setDateRange(page, startDate, endDate) {
       await page.waitForTimeout(800);
     }
 
-    // 点击面板内的"今天"
-    const todayBtn = page.locator('.ant-calendar-picker-container >> text=今天').first();
-    if (!(await todayBtn.count())) {
-      // 备选：尝试"今日"
-      const todayBtn2 = page.locator('.ant-calendar-picker-container >> text=今日').first();
-      await todayBtn2.click();
+    // 根据目标日期决定点击"今天"还是"昨天"
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday = startDate === formatDate(yesterday);
+    
+    const targetText = isYesterday ? '昨天' : '今天';
+    const targetText2 = isYesterday ? '昨日' : '今日';
+    
+    // 点击面板内的目标日期按钮
+    const targetBtn = page.locator(`.ant-calendar-picker-container >> text=${targetText}`).first();
+    if (!(await targetBtn.count())) {
+      // 备选：尝试另一种写法
+      const targetBtn2 = page.locator(`.ant-calendar-picker-container >> text=${targetText2}`).first();
+      if (await targetBtn2.count()) {
+        await targetBtn2.click();
+      } else {
+        // 如果找不到昨天按钮，手动选择日期
+        log(`⚠️ 找不到"${targetText}"按钮，尝试手动选择日期...`);
+        // 点击日期输入框，手动输入
+        const dateInput = page.locator('.ant-calendar-picker-container input').first();
+        if (await dateInput.count()) {
+          await dateInput.fill(startDate);
+          await page.keyboard.press('Enter');
+        }
+      }
     } else {
-      await todayBtn.click();
+      await targetBtn.click();
     }
-    log('✅ 已点击今天，等待数据刷新...');
-    await page.waitForTimeout(3000);
+    log(`✅ 已点击${targetText}，等待数据刷新...`);
+    
+    // 等待日期选择器关闭（点击空白处或按ESC）
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+    
+    // 等待数据刷新：检测表格内容是否变化（轮询）
+    let waitCount = 0;
+    const maxWait = 15;
+    
+    // 获取当前表格特征（第一页前5个账号名称）
+    const getTableSignature = async () => {
+      return await page.evaluate(() => {
+        const rows = document.querySelectorAll('table tbody tr, .ant-table-tbody tr, [class*="row"]');
+        const names = [];
+        for (let i = 0; i < Math.min(5, rows.length); i++) {
+          const text = rows[i].textContent?.trim() || '';
+          const firstWord = text.split(/[\s\n]+/)[0];
+          if (firstWord && firstWord.length > 1) names.push(firstWord);
+        }
+        return names.join(',');
+      });
+    };
+    
+    const beforeSig = await getTableSignature();
+    log(`   点击前表格特征: ${beforeSig || 'empty'}`);
+    
+    let dataRefreshed = false;
+    while (waitCount < maxWait && !dataRefreshed) {
+      await page.waitForTimeout(1000);
+      waitCount++;
+      
+      const afterSig = await getTableSignature();
+      // 如果表格特征变了，说明数据已刷新
+      if (afterSig && afterSig !== beforeSig && afterSig.length > 10) {
+        dataRefreshed = true;
+        log(`   数据已刷新（表格特征变化），共等待 ${waitCount} 秒`);
+        log(`   新特征: ${afterSig}`);
+      }
+    }
+    
+    if (!dataRefreshed) {
+      log(`   ⚠️ 等待 ${maxWait} 秒后表格未检测到变化，继续执行...`);
+    }
+    
+    // 额外等待表格稳定
+    await page.waitForTimeout(2000);
   } catch (e) {
     log('⚠️ 自动设置日期失败:', e.message);
   }
@@ -418,20 +490,28 @@ async function scrapeViaDom(page) {
 
           const nameEl = cells[fieldMap.nameCol];
           let name = '';
+          let detail = '';
           for (const node of nameEl.childNodes) {
             if (node.nodeType === 3 && node.textContent.trim()) {
               name = node.textContent.trim();
               break;
             }
           }
-          if (!name) name = nameEl.innerText.trim().split(/\s|\n/)[0];
+          if (!name) {
+            const fullText = nameEl.innerText.trim();
+            const lines = fullText.split(/\s|\n/);
+            name = lines[0];
+            detail = fullText;
+          } else {
+            detail = nameEl.innerText.trim();
+          }
 
           const costText = cells[fieldMap.costCol]?.textContent.trim().replace(/[¥,\s]/g, '') || '0';
           const cost = parseFloat(costText) || 0;
 
           if (name) {
             const cleanName = name.replace(/[（(].*$/, '').trim();
-            data.push({ name: cleanName, cost });
+            data.push({ name: cleanName, cost, detail });
           }
         });
 

@@ -40,6 +40,20 @@ function getCalendarDays(year: number, month: number) {
   return days;
 }
 
+function extractId(detail: string): string {
+  if (!detail) return '';
+  // 提取户ID (10位以上数字)
+  const uidMatch = detail.match(/户ID[：:\s]*(\d{10,})/);
+  if (uidMatch) return uidMatch[1];
+  // 提取UID (18-20位数字)
+  const uidMatch2 = detail.match(/UID[：:\s]*(\d{18,20})/);
+  if (uidMatch2) return uidMatch2[1];
+  // 兜底：提取任意10位以上连续数字
+  const genericMatch = detail.match(/(\d{10,})/);
+  if (genericMatch) return genericMatch[1];
+  return '';
+}
+
 export default function AdminPage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [fields, setFields] = useState<FieldDef[]>([]);
@@ -87,6 +101,7 @@ export default function AdminPage() {
   const [pendingDetail, setPendingDetail] = useState<any>(null);
   const [pendingDetailOpen, setPendingDetailOpen] = useState(false);
   const [pendingEdits, setPendingEdits] = useState<Record<string, any>>({});
+  const [pendingSelected, setPendingSelected] = useState<Set<string>>(new Set());
 
   // Data calendar picker
   const [showDataCalendar, setShowDataCalendar] = useState(false);
@@ -487,7 +502,7 @@ export default function AdminPage() {
     } catch (e: any) { setPendingMsg(e.message); }
   };
 
-  const processPending = async (filename: string) => {
+  const processPending = async (filename: string, selectedOnly?: boolean) => {
     setPendingMsg('');
     try {
       const edits = Object.entries(pendingEdits).map(([oldName, edit]: [string, any]) => ({
@@ -495,16 +510,22 @@ export default function AdminPage() {
         ...edit,
       })).filter(e => e.newName || e.orders !== undefined || e.net_income !== undefined || e.cost !== undefined);
 
+      const body: any = { action: 'process', filename, edits: edits.length > 0 ? edits : undefined };
+      if (selectedOnly) {
+        body.selectedNames = Array.from(pendingSelected);
+      }
+
       const res = await fetch('/api/pending-errors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'process', filename, edits: edits.length > 0 ? edits : undefined }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (json.error) throw new Error(json.error);
       setPendingMsg(json.message || '处理成功');
       setPendingDetailOpen(false);
       setPendingDetail(null);
+      setPendingSelected(new Set());
       loadPending();
     } catch (e: any) { setPendingMsg(e.message); }
   };
@@ -1282,7 +1303,21 @@ export default function AdminPage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                   <thead>
                     <tr style={{ background: '#f5f5f7' }}>
+                      <th style={{ padding: '8px 10px', textAlign: 'center', borderBottom: '1px solid #e8e8ed', width: 40 }}>
+                        <input
+                          type="checkbox"
+                          checked={pendingDetail.data?.length > 0 && pendingDetail.data.every((d: any) => pendingSelected.has(d.name))}
+                          onChange={e => {
+                            if (e.target.checked) {
+                              setPendingSelected(new Set(pendingDetail.data.map((d: any) => d.name)));
+                            } else {
+                              setPendingSelected(new Set());
+                            }
+                          }}
+                        />
+                      </th>
                       <th style={{ padding: '8px 10px', textAlign: 'left', borderBottom: '1px solid #e8e8ed' }}>原始名称</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', borderBottom: '1px solid #e8e8ed' }}>{pendingDetail.type === 'costs' ? '户ID' : 'UID'}</th>
                       <th style={{ padding: '8px 10px', textAlign: 'center', borderBottom: '1px solid #e8e8ed' }}>修正名称</th>
                       {pendingDetail.type === 'stats' && (<>
                         <th style={{ padding: '8px 10px', textAlign: 'center', borderBottom: '1px solid #e8e8ed' }}>单量</th>
@@ -1296,7 +1331,22 @@ export default function AdminPage() {
                   <tbody>
                     {pendingDetail.data?.map((item: any, idx: number) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={pendingSelected.has(item.name)}
+                            onChange={e => {
+                              setPendingSelected(prev => {
+                                const next = new Set(prev);
+                                if (e.target.checked) next.add(item.name);
+                                else next.delete(item.name);
+                                return next;
+                              });
+                            }}
+                          />
+                        </td>
                         <td style={{ padding: '6px 10px', fontSize: 12, color: '#1d1d1f' }}>{item.name}</td>
+                        <td style={{ padding: '6px 10px', fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>{extractId(item.detail) || '-'}</td>
                         <td style={{ padding: '6px 10px', textAlign: 'center' }}>
                           <input
                             type="text"
@@ -1343,14 +1393,27 @@ export default function AdminPage() {
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
               <button
-                onClick={() => processPending(pendingDetail._filename || `${pendingDetail.type}-${pendingDetail.date}`)}
-                style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+                onClick={() => {
+                  // 只处理选中的行
+                  if (pendingSelected.size === 0) {
+                    setPendingMsg('请先勾选要处理的数据');
+                    return;
+                  }
+                  processPending(pendingDetail._filename || `${pendingDetail.type}-${pendingDetail.date}`, true);
+                }}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#34c759', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
               >
-                确认入库
+                入库选中 ({pendingSelected.size})
               </button>
               <button
-                onClick={() => { setPendingDetailOpen(false); setPendingDetail(null); setPendingEdits({}); }}
-                style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e8e8ed', background: 'white', fontSize: 14, cursor: 'pointer', color: '#1d1d1f' }}
+                onClick={() => processPending(pendingDetail._filename || `${pendingDetail.type}-${pendingDetail.date}`)}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #0071e3', background: 'white', color: '#0071e3', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                全部入库
+              </button>
+              <button
+                onClick={() => { setPendingDetailOpen(false); setPendingDetail(null); setPendingEdits({}); setPendingSelected(new Set()); }}
+                style={{ padding: '10px 16px', borderRadius: 10, border: '1px solid #e8e8ed', background: 'white', fontSize: 14, cursor: 'pointer', color: '#1d1d1f' }}
               >
                 取消
               </button>

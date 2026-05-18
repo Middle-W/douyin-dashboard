@@ -78,6 +78,11 @@ export async function POST(request: NextRequest) {
       const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
       let data = content.data || [];
 
+      // 只处理选中的行
+      if (body.selectedNames && Array.isArray(body.selectedNames) && body.selectedNames.length > 0) {
+        data = data.filter((d: any) => body.selectedNames.includes(d.name));
+      }
+
       // 应用编辑
       if (edits && Array.isArray(edits)) {
         for (const edit of edits) {
@@ -192,8 +197,10 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // 成功后删除 pending 文件
-      fs.unlinkSync(filePath);
+      // 成功后删除 pending 文件（如果全部处理完）
+      if (!body.selectedNames || body.selectedNames.length === content.data?.length) {
+        fs.unlinkSync(filePath);
+      }
 
       return NextResponse.json({
         success: true,
