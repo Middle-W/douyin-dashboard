@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { savePending } from '@/lib/save-pending';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -15,9 +16,12 @@ export async function OPTIONS() {
 }
 
 export async function POST(request: NextRequest) {
+  let date = '';
+  let rawCosts: any[] = [];
   try {
     const body = await request.json();
-    const { date, costs: rawCosts } = body;
+    date = body.date || '';
+    rawCosts = body.costs || [];
 
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return NextResponse.json({ error: 'Invalid date format, expected YYYY-MM-DD' }, { status: 400, headers: corsHeaders });
@@ -72,6 +76,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (costs.length === 0) {
+      // 保存到 pending-errors
+      savePending('costs', date, rawCosts, 'No valid cost data after matching', unmatched);
       return NextResponse.json({
         error: 'No valid cost data after matching',
         unmatched,
@@ -101,6 +107,8 @@ export async function POST(request: NextRequest) {
     }, { headers: corsHeaders });
 
   } catch (err: any) {
+    // 保存到 pending-errors
+    savePending('costs', date, rawCosts, err.message);
     return NextResponse.json({ error: err.message }, { status: 500, headers: corsHeaders });
   }
 }

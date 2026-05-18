@@ -80,6 +80,14 @@ export default function AdminPage() {
   const [editingData, setEditingData] = useState<any>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
+  // Pending errors state
+  const [pendingList, setPendingList] = useState<any[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [pendingMsg, setPendingMsg] = useState('');
+  const [pendingDetail, setPendingDetail] = useState<any>(null);
+  const [pendingDetailOpen, setPendingDetailOpen] = useState(false);
+  const [pendingEdits, setPendingEdits] = useState<Record<string, any>>({});
+
   // Data calendar picker
   const [showDataCalendar, setShowDataCalendar] = useState(false);
   const [dataCalMonth, setDataCalMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
@@ -428,6 +436,71 @@ export default function AdminPage() {
     loadData(tab, dataDate);
   };
 
+  // ===== Pending Errors Functions =====
+  const loadPending = async () => {
+    setPendingLoading(true); setPendingMsg('');
+    try {
+      const res = await fetch('/api/pending-errors?t=' + Date.now(), { cache: 'no-store' });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setPendingList(json.items || []);
+    } catch (e: any) { setPendingMsg(e.message); }
+    finally { setPendingLoading(false); }
+  };
+
+  const loadPendingDetail = async (filename: string) => {
+    try {
+      const res = await fetch('/api/pending-errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'load', filename }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setPendingDetail({ ...json.content, _filename: filename });
+      setPendingDetailOpen(true);
+      setPendingEdits({});
+    } catch (e: any) { setPendingMsg(e.message); }
+  };
+
+  const processPending = async (filename: string) => {
+    setPendingMsg('');
+    try {
+      const edits = Object.entries(pendingEdits).map(([oldName, edit]: [string, any]) => ({
+        oldName,
+        ...edit,
+      })).filter(e => e.newName || e.orders !== undefined || e.net_income !== undefined || e.cost !== undefined);
+
+      const res = await fetch('/api/pending-errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'process', filename, edits: edits.length > 0 ? edits : undefined }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setPendingMsg(json.message || '处理成功');
+      setPendingDetailOpen(false);
+      setPendingDetail(null);
+      loadPending();
+    } catch (e: any) { setPendingMsg(e.message); }
+  };
+
+  const deletePending = async (filename: string) => {
+    if (!confirm('确定删除该异常记录？')) return;
+    setPendingMsg('');
+    try {
+      const res = await fetch('/api/pending-errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', filename }),
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setPendingMsg('已删除');
+      loadPending();
+    } catch (e: any) { setPendingMsg(e.message); }
+  };
+
   return (
     <div style={{ background: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       <div style={{ background: '#ffffff', color: '#1d1d1f', padding: '24px', borderBottom: '1px solid #e8e8ed' }}>
@@ -760,6 +833,61 @@ export default function AdminPage() {
             {filtered.length === 0 && <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>没有找到匹配的账号</div>}
           </div>
         )}
+        {/* Pending Errors Manager */}
+        <div id="pending-errors" style={{ background: 'white', borderRadius: 20, padding: 24, marginTop: 24, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#1d1d1f' }}>⚠️ 异常数据处理</h2>
+            <button onClick={loadPending}
+              style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid #0071e3', background: 'white', color: '#0071e3', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              🔄 刷新
+            </button>
+          </div>
+          {pendingMsg && <div style={{ fontSize: 13, color: pendingMsg.includes('成功') || pendingMsg.includes('已') ? '#34c759' : '#ff3b30', marginBottom: 12 }}>{pendingMsg}</div>}
+          {pendingLoading ? <div style={{ textAlign: 'center', padding: 30, color: '#86868b' }}>加载中...</div> : (
+            pendingList.length > 0 ? (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f7' }}>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid #e8e8ed' }}>类型</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid #e8e8ed' }}>日期</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid #e8e8ed' }}>记录数</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid #e8e8ed' }}>未匹配</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid #e8e8ed' }}>错误原因</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '1px solid #e8e8ed' }}>创建时间</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid #e8e8ed', width: 180 }}>操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingList.map((item, idx) => (
+                      <tr key={item.filename} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 1 ? '#fafafa' : '#fff' }}>
+                        <td style={{ padding: '10px 12px' }}>
+                          <span style={{ padding: '2px 10px', borderRadius: 12, background: item.type === 'stats' ? '#e8f5e9' : '#fff3e0', color: item.type === 'stats' ? '#2e7d32' : '#ef6c00', fontSize: 12, fontWeight: 500 }}>
+                            {item.type === 'stats' ? '订单数据' : '消耗数据'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '10px 12px', fontWeight: 500 }}>{item.date}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>{item.recordCount}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center', color: item.unmatched > 0 ? '#c62828' : '#2e7d32' }}>{item.unmatched}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 12, color: '#64748b', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.error}</td>
+                        <td style={{ padding: '10px 12px', fontSize: 12, color: '#86868b' }}>{new Date(item.createdAt).toLocaleString('zh-CN')}</td>
+                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                          <button onClick={() => loadPendingDetail(item.filename)}
+                            style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #0071e3', background: 'white', color: '#0071e3', fontSize: 12, cursor: 'pointer', marginRight: 6 }}>处理</button>
+                          <button onClick={() => deletePending(item.filename)}
+                            style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', color: '#ff3b30', fontSize: 12, cursor: 'pointer' }}>删除</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: 30, color: '#86868b', fontSize: 13 }}>暂无异常数据 🎉</div>
+            )
+          )}
+        </div>
+
         {/* Data Manager */}
         <div id="data-manager" style={{ background: 'white', borderRadius: 20, padding: 24, marginTop: 24, boxShadow: '0 4px 24px rgba(0,0,0,0.04)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -1024,6 +1152,110 @@ export default function AdminPage() {
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
               <button onClick={confirmUpload} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>确认上传</button>
               <button onClick={() => { setShowPreviewModal(false); setPendingUpload(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e8e8ed', background: 'white', fontSize: 14, cursor: 'pointer', color: '#1d1d1f' }}>取消</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Detail Modal */}
+      {pendingDetailOpen && pendingDetail && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }} onClick={() => { setPendingDetailOpen(false); setPendingDetail(null); setPendingEdits({}); }}>
+          <div style={{ background: 'white', borderRadius: 20, padding: 28, width: 640, maxWidth: '90vw', maxHeight: '80vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ margin: '0 0 16px', fontSize: 18 }}>⚠️ 异常数据详情</h2>
+            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16, padding: '8px 12px', background: '#f8fafc', borderRadius: 8 }}>
+              类型：{pendingDetail.type === 'stats' ? '订单数据' : '消耗数据'} | 日期：{pendingDetail.date} | 共 {pendingDetail.data?.length || 0} 条
+            </div>
+            {pendingDetail.error && (
+              <div style={{ fontSize: 12, color: '#c62828', marginBottom: 12, padding: '8px 12px', background: '#ffebee', borderRadius: 8 }}>错误：{pendingDetail.error}</div>
+            )}
+            {pendingDetail.unmatched && pendingDetail.unmatched.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#c62828', marginBottom: 6 }}>未匹配账号：{pendingDetail.unmatched.length} 个</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {pendingDetail.unmatched.map((name: string) => (
+                    <span key={name} style={{ padding: '3px 8px', borderRadius: 6, background: '#ffebee', color: '#c62828', fontSize: 12 }}>{name}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 6 }}>数据列表</div>
+              <div style={{ maxHeight: 300, overflow: 'auto', border: '1px solid #f1f5f9', borderRadius: 8 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ background: '#f5f5f7' }}>
+                      <th style={{ padding: '8px 10px', textAlign: 'left', borderBottom: '1px solid #e8e8ed' }}>原始名称</th>
+                      <th style={{ padding: '8px 10px', textAlign: 'center', borderBottom: '1px solid #e8e8ed' }}>修正名称</th>
+                      {pendingDetail.type === 'stats' && (<>
+                        <th style={{ padding: '8px 10px', textAlign: 'center', borderBottom: '1px solid #e8e8ed' }}>单量</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'center', borderBottom: '1px solid #e8e8ed' }}>净佣金</th>
+                      </>)}
+                      {pendingDetail.type === 'costs' && (
+                        <th style={{ padding: '8px 10px', textAlign: 'center', borderBottom: '1px solid #e8e8ed' }}>消耗</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pendingDetail.data?.map((item: any, idx: number) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '6px 10px', fontSize: 12, color: '#1d1d1f' }}>{item.name}</td>
+                        <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                          <input
+                            type="text"
+                            value={pendingEdits[item.name]?.newName ?? item.name}
+                            onChange={e => setPendingEdits(prev => ({ ...prev, [item.name]: { ...prev[item.name], newName: e.target.value } }))}
+                            style={{ width: 100, padding: '3px 6px', borderRadius: 4, border: '1px solid #e2e8f0', fontSize: 12 }}
+                          />
+                        </td>
+                        {pendingDetail.type === 'stats' && (<>
+                          <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                            <input
+                              type="number"
+                              value={pendingEdits[item.name]?.orders ?? item.orders ?? 0}
+                              onChange={e => setPendingEdits(prev => ({ ...prev, [item.name]: { ...prev[item.name], orders: parseInt(e.target.value) || 0 } }))}
+                              style={{ width: 60, padding: '3px 6px', borderRadius: 4, border: '1px solid #e2e8f0', fontSize: 12 }}
+                            />
+                          </td>
+                          <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={pendingEdits[item.name]?.net_income ?? item.net_income ?? 0}
+                              onChange={e => setPendingEdits(prev => ({ ...prev, [item.name]: { ...prev[item.name], net_income: parseFloat(e.target.value) || 0 } }))}
+                              style={{ width: 80, padding: '3px 6px', borderRadius: 4, border: '1px solid #e2e8f0', fontSize: 12 }}
+                            />
+                          </td>
+                        </>)}
+                        {pendingDetail.type === 'costs' && (
+                          <td style={{ padding: '6px 10px', textAlign: 'center' }}>
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={pendingEdits[item.name]?.cost ?? item.cost ?? 0}
+                              onChange={e => setPendingEdits(prev => ({ ...prev, [item.name]: { ...prev[item.name], cost: parseFloat(e.target.value) || 0 } }))}
+                              style={{ width: 80, padding: '3px 6px', borderRadius: 4, border: '1px solid #e2e8f0', fontSize: 12 }}
+                            />
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button
+                onClick={() => processPending(pendingDetail._filename || `${pendingDetail.type}-${pendingDetail.date}`)}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#0071e3', color: 'white', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                确认入库
+              </button>
+              <button
+                onClick={() => { setPendingDetailOpen(false); setPendingDetail(null); setPendingEdits({}); }}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e8e8ed', background: 'white', fontSize: 14, cursor: 'pointer', color: '#1d1d1f' }}
+              >
+                取消
+              </button>
             </div>
           </div>
         </div>
