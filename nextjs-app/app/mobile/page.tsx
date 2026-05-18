@@ -121,8 +121,12 @@ export default function MobileDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'normal' | 'abnormal'>('all');
   const [showMoreFilter, setShowMoreFilter] = useState(false);
+
+  /* 更多筛选维度 */
+  const [buyerFilter, setBuyerFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [metaStatusFilter, setMetaStatusFilter] = useState<string>('all');
 
   const trendCanvasRef = useRef<HTMLCanvasElement>(null);
   const trendChartRef = useRef<any>(null);
@@ -155,7 +159,7 @@ export default function MobileDashboardPage() {
   }, [datePreset]);
 
   /* 筛选条件变化时自动回到第1页 */
-  useEffect(() => { setPage(1); }, [searchQuery, statusFilter, datePreset, sortKey, sortDesc, activeMetric]);
+  useEffect(() => { setPage(1); }, [searchQuery, buyerFilter, typeFilter, metaStatusFilter, datePreset, sortKey, sortDesc, activeMetric]);
 
   const allAccounts = data?.accounts || [];
 
@@ -181,20 +185,29 @@ export default function MobileDashboardPage() {
     }));
   }, [allAccounts, displayDates]);
 
-  /* 搜索 + 状态过滤 */
+  /* 动态提取筛选项 */
+  const allBuyers = useMemo(() => [...new Set<string>(displayAccounts.map((a: any) => a.metaBuyer).filter(Boolean))].sort(), [displayAccounts]);
+  const allTypes = useMemo(() => [...new Set<string>(displayAccounts.map((a: any) => a.accountType).filter(Boolean))].sort(), [displayAccounts]);
+  const allMetaStatuses = useMemo(() => [...new Set<string>(displayAccounts.map((a: any) => a.metaStatus).filter(Boolean))].sort(), [displayAccounts]);
+
+  /* 搜索 + 更多筛选过滤 */
   const filteredAccounts = useMemo(() => {
     let arr = [...displayAccounts];
     if (searchQuery.trim()) {
       const q = searchQuery.trim().toLowerCase();
       arr = arr.filter((a: any) => a.account?.toLowerCase().includes(q));
     }
-    if (statusFilter === 'normal') {
-      arr = arr.filter((a: any) => (a._health?.total || 0) >= 50);
-    } else if (statusFilter === 'abnormal') {
-      arr = arr.filter((a: any) => (a._health?.total || 100) < 50);
+    if (buyerFilter !== 'all') {
+      arr = arr.filter((a: any) => a.metaBuyer === buyerFilter);
+    }
+    if (typeFilter !== 'all') {
+      arr = arr.filter((a: any) => a.accountType === typeFilter);
+    }
+    if (metaStatusFilter !== 'all') {
+      arr = arr.filter((a: any) => a.metaStatus === metaStatusFilter);
     }
     return arr;
-  }, [displayAccounts, searchQuery, statusFilter]);
+  }, [displayAccounts, searchQuery, buyerFilter, typeFilter, metaStatusFilter]);
 
   const sortedAccounts = useMemo(() => {
     const arr = [...filteredAccounts];
@@ -277,6 +290,15 @@ export default function MobileDashboardPage() {
 
   const cfg = METRIC_CONFIG[activeMetric];
 
+  /* 筛选面板通用 pill 样式 */
+  const pillBtn = (active: boolean, color: string) => ({
+    padding: '5px 12px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer' as const,
+    background: active ? color : '#f5f5f7',
+    color: active ? 'white' : '#515154',
+    fontWeight: active ? 600 : 400,
+    whiteSpace: 'nowrap' as const,
+  });
+
   return (
     <div style={{ minHeight: '100vh', paddingBottom: 100, background: '#f5f5f7' }}>
       {/* Header */}
@@ -328,7 +350,15 @@ export default function MobileDashboardPage() {
         })}
       </div>
 
-      {/* 更多筛选按钮 */}
+      {/* Trend Chart — 恢复 */}
+      <div style={{ margin: '12px 16px', background: '#ffffff', borderRadius: 14, padding: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 6 }}>{cfg.label}趋势</div>
+        <div style={{ height: 140 }}>
+          <canvas ref={trendCanvasRef} style={{ width: '100%', height: '100%' }} />
+        </div>
+      </div>
+
+      {/* 更多筛选按钮 + 结果计数 */}
       <div style={{ margin: '0 16px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontSize: 11, color: '#86868b' }}>共 {sortedAccounts.length} 个账号</div>
         <button
@@ -349,33 +379,47 @@ export default function MobileDashboardPage() {
 
       {/* 更多筛选面板 */}
       {showMoreFilter && (
-        <div style={{ margin: '0 16px 12px', background: '#ffffff', borderRadius: 14, padding: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {/* 状态筛选 */}
-          <div>
-            <div style={{ fontSize: 11, color: '#86868b', marginBottom: 6, fontWeight: 600 }}>状态</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {[
-                { key: 'all', label: '全部' },
-                { key: 'normal', label: '正常' },
-                { key: 'abnormal', label: '异常' },
-              ].map(s => (
-                <button
-                  key={s.key}
-                  onClick={() => setStatusFilter(s.key as any)}
-                  style={{
-                    padding: '5px 12px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer',
-                    background: statusFilter === s.key ? '#34c759' : '#f5f5f7',
-                    color: statusFilter === s.key ? 'white' : '#515154',
-                    fontWeight: statusFilter === s.key ? 600 : 400,
-                  }}
-                >
-                  {s.label}
-                </button>
-              ))}
+        <div style={{ margin: '0 16px 12px', background: '#ffffff', borderRadius: 14, padding: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* 选品人 */}
+          {allBuyers.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, color: '#86868b', marginBottom: 6, fontWeight: 600 }}>选品人</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button onClick={() => setBuyerFilter('all')} style={pillBtn(buyerFilter === 'all', '#af52de')}>全部</button>
+                {allBuyers.map((b: string) => (
+                  <button key={b} onClick={() => setBuyerFilter(b)} style={pillBtn(buyerFilter === b, '#af52de')}>{b}</button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* 排序方式 */}
+          {/* 账号类型 */}
+          {allTypes.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, color: '#86868b', marginBottom: 6, fontWeight: 600 }}>账号类型</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button onClick={() => setTypeFilter('all')} style={pillBtn(typeFilter === 'all', '#0071e3')}>全部</button>
+                {allTypes.map((t: string) => (
+                  <button key={t} onClick={() => setTypeFilter(t)} style={pillBtn(typeFilter === t, '#0071e3')}>{t}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 账号状态 */}
+          {allMetaStatuses.length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, color: '#86868b', marginBottom: 6, fontWeight: 600 }}>账号状态</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button onClick={() => setMetaStatusFilter('all')} style={pillBtn(metaStatusFilter === 'all', '#34c759')}>全部</button>
+                {allMetaStatuses.map((s: string) => (
+                  <button key={s} onClick={() => setMetaStatusFilter(s)} style={pillBtn(metaStatusFilter === s, '#34c759')}>{s}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 排序 */}
           <div>
             <div style={{ fontSize: 11, color: '#86868b', marginBottom: 6, fontWeight: 600 }}>排序</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -389,12 +433,7 @@ export default function MobileDashboardPage() {
                 <button
                   key={s.key}
                   onClick={() => { if (sortKey === s.key) setSortDesc(!sortDesc); else { setSortKey(s.key as SortKey); setSortDesc(true); } }}
-                  style={{
-                    padding: '5px 12px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer',
-                    background: sortKey === s.key ? '#0071e3' : '#f5f5f7',
-                    color: sortKey === s.key ? 'white' : '#515154',
-                    fontWeight: sortKey === s.key ? 600 : 400,
-                  }}
+                  style={pillBtn(sortKey === s.key, '#ff9500')}
                 >
                   {s.label} {sortKey === s.key ? (sortDesc ? '↓' : '↑') : ''}
                 </button>
