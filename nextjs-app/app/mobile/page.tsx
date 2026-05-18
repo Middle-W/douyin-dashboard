@@ -110,7 +110,7 @@ export default function MobileDashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeMetric, setActiveMetric] = useState<Metric>('netIncome');
+  const [activeMetric, setActiveMetric] = useState<Metric>('orders');
   const [datePreset, setDatePreset] = useState('今日');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -482,8 +482,8 @@ export default function MobileDashboardPage() {
                 <div style={{ fontSize: 13, fontWeight: 700, color: a._profit >= 0 ? '#34c759' : '#ff3b30' }}>¥{Math.round(a._profit).toLocaleString()}</div>
               </div>
             </div>
-            {/* Daily bars */}
-            {displayDates.length > 0 && (
+            {/* Daily bars — 单日不显示（会变成一大块，不好看） */}
+            {displayDates.length > 1 && (
               <div style={{ marginTop: 8, display: 'flex', gap: 2, alignItems: 'flex-end', height: 28 }}>
                 {displayDates.map(d => {
                   const v = a.daily?.[d]?.[activeMetric === 'orders' ? 'orders' : activeMetric === 'netIncome' ? 'netIncome' : activeMetric === 'cost' ? 'cost' : 'profit'] || 0;
