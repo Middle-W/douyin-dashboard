@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Chart from 'chart.js/auto';
 
 type Metric = 'orders' | 'netIncome' | 'cost' | 'profit';
+type SortKey = 'orders' | 'netIncome' | 'cost' | 'profit' | 'health';
 
 const METRIC_CONFIG: Record<Metric, { label: string; color: string; prefix: string; icon: string; field: string }> = {
   orders: { label: '单量', color: '#0071e3', prefix: '', icon: '单', field: 'totalOrders' },
@@ -114,14 +115,14 @@ export default function MobileDashboardPage() {
   const [datePreset, setDatePreset] = useState('今日');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [sortKey, setSortKey] = useState<'metric' | 'profit' | 'health'>('metric');
+  const [sortKey, setSortKey] = useState<SortKey>('netIncome');
   const [sortDesc, setSortDesc] = useState(true);
 
-  /* 新增：搜索 + 分页 + 状态筛选 */
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState<'all' | 'normal' | 'abnormal'>('all');
+  const [showMoreFilter, setShowMoreFilter] = useState(false);
 
   const trendCanvasRef = useRef<HTMLCanvasElement>(null);
   const trendChartRef = useRef<any>(null);
@@ -202,15 +203,12 @@ export default function MobileDashboardPage() {
         const diff = (a._health?.total || 0) - (b._health?.total || 0);
         return sortDesc ? -diff : diff;
       }
-      if (sortKey === 'profit') {
-        const diff = a._profit - b._profit;
-        return sortDesc ? -diff : diff;
-      }
-      const diff = (a[METRIC_CONFIG[activeMetric].field] || 0) - (b[METRIC_CONFIG[activeMetric].field] || 0);
+      const field = `_${sortKey}` as string;
+      const diff = (a[field] || 0) - (b[field] || 0);
       return sortDesc ? -diff : diff;
     });
     return arr;
-  }, [filteredAccounts, sortKey, sortDesc, activeMetric]);
+  }, [filteredAccounts, sortKey, sortDesc]);
 
   /* 分页 */
   const totalPages = Math.max(1, Math.ceil(sortedAccounts.length / pageSize));
@@ -294,8 +292,8 @@ export default function MobileDashboardPage() {
         </div>
       </div>
 
-      {/* Metric Cards — 收窄紧凑，4个一排 */}
-      <div style={{ padding: '12px 16px', display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+      {/* Metric Cards — 吸顶 */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 50, background: '#f5f5f7', padding: '12px 16px', display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
         {METRIC_KEYS.map(m => {
           const c = METRIC_CONFIG[m];
           const val = totals[m];
@@ -330,13 +328,81 @@ export default function MobileDashboardPage() {
         })}
       </div>
 
-      {/* Trend Chart */}
-      <div style={{ margin: '0 16px 12px', background: '#ffffff', borderRadius: 14, padding: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 6 }}>{cfg.label}趋势</div>
-        <div style={{ height: 140 }}>
-          <canvas ref={trendCanvasRef} style={{ width: '100%', height: '100%' }} />
-        </div>
+      {/* 更多筛选按钮 */}
+      <div style={{ margin: '0 16px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: 11, color: '#86868b' }}>共 {sortedAccounts.length} 个账号</div>
+        <button
+          onClick={() => setShowMoreFilter(v => !v)}
+          style={{
+            padding: '5px 12px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer',
+            background: showMoreFilter ? '#0071e3' : '#ffffff',
+            color: showMoreFilter ? 'white' : '#515154',
+            fontWeight: 600,
+            boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+            display: 'flex', alignItems: 'center', gap: 4,
+          }}
+        >
+          {showMoreFilter ? '收起筛选' : '更多筛选'}
+          <span style={{ fontSize: 10, transform: showMoreFilter ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', display: 'inline-block' }}>▼</span>
+        </button>
       </div>
+
+      {/* 更多筛选面板 */}
+      {showMoreFilter && (
+        <div style={{ margin: '0 16px 12px', background: '#ffffff', borderRadius: 14, padding: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* 状态筛选 */}
+          <div>
+            <div style={{ fontSize: 11, color: '#86868b', marginBottom: 6, fontWeight: 600 }}>状态</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {[
+                { key: 'all', label: '全部' },
+                { key: 'normal', label: '正常' },
+                { key: 'abnormal', label: '异常' },
+              ].map(s => (
+                <button
+                  key={s.key}
+                  onClick={() => setStatusFilter(s.key as any)}
+                  style={{
+                    padding: '5px 12px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer',
+                    background: statusFilter === s.key ? '#34c759' : '#f5f5f7',
+                    color: statusFilter === s.key ? 'white' : '#515154',
+                    fontWeight: statusFilter === s.key ? 600 : 400,
+                  }}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 排序方式 */}
+          <div>
+            <div style={{ fontSize: 11, color: '#86868b', marginBottom: 6, fontWeight: 600 }}>排序</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {[
+                { key: 'orders', label: '单量' },
+                { key: 'netIncome', label: '有效净佣金' },
+                { key: 'cost', label: '消耗' },
+                { key: 'profit', label: '利润' },
+                { key: 'health', label: '健康度' },
+              ].map(s => (
+                <button
+                  key={s.key}
+                  onClick={() => { if (sortKey === s.key) setSortDesc(!sortDesc); else { setSortKey(s.key as SortKey); setSortDesc(true); } }}
+                  style={{
+                    padding: '5px 12px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer',
+                    background: sortKey === s.key ? '#0071e3' : '#f5f5f7',
+                    color: sortKey === s.key ? 'white' : '#515154',
+                    fontWeight: sortKey === s.key ? 600 : 400,
+                  }}
+                >
+                  {s.label} {sortKey === s.key ? (sortDesc ? '↓' : '↑') : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search */}
       <div style={{ margin: '0 16px 10px', position: 'relative' }}>
@@ -357,56 +423,6 @@ export default function MobileDashboardPage() {
           }}
         />
         <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: '#a1a1a6' }}>🔍</span>
-      </div>
-
-      {/* Status Filter + Sort */}
-      <div style={{ margin: '0 16px 10px', display: 'flex', gap: 6, overflowX: 'auto' }}>
-        {[
-          { key: 'all', label: '全部' },
-          { key: 'normal', label: '正常' },
-          { key: 'abnormal', label: '异常' },
-        ].map(s => (
-          <button
-            key={s.key}
-            onClick={() => setStatusFilter(s.key as any)}
-            style={{
-              padding: '5px 12px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer',
-              background: statusFilter === s.key ? '#34c759' : '#ffffff',
-              color: statusFilter === s.key ? 'white' : '#515154',
-              fontWeight: statusFilter === s.key ? 600 : 400,
-              whiteSpace: 'nowrap',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-            }}
-          >
-            {s.label}
-          </button>
-        ))}
-        <div style={{ width: 1, background: '#e8e8ed', margin: '2px 4px' }} />
-        {[
-          { key: 'metric', label: `按${cfg.label}` },
-          { key: 'profit', label: '按利润' },
-          { key: 'health', label: '按健康度' },
-        ].map(s => (
-          <button
-            key={s.key}
-            onClick={() => { if (sortKey === s.key) setSortDesc(!sortDesc); else { setSortKey(s.key as any); setSortDesc(true); } }}
-            style={{
-              padding: '5px 12px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer',
-              background: sortKey === s.key ? '#0071e3' : '#ffffff',
-              color: sortKey === s.key ? 'white' : '#515154',
-              fontWeight: sortKey === s.key ? 600 : 400,
-              whiteSpace: 'nowrap',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
-            }}
-          >
-            {s.label} {sortKey === s.key ? (sortDesc ? '↓' : '↑') : ''}
-          </button>
-        ))}
-      </div>
-
-      {/* Result count */}
-      <div style={{ margin: '0 16px 8px', fontSize: 11, color: '#86868b' }}>
-        共 {sortedAccounts.length} 个账号
       </div>
 
       {/* Account Cards */}
