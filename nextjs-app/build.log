@@ -1,0 +1,43 @@
+ ⚠ Invalid next.config.js options detected: 
+ ⚠     Unrecognized key(s) in object: 'api'
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+  ▲ Next.js 14.2.0
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./app/page.tsx
+Error: 
+  [31mx[0m Expression expected
+     ,-[[36;1;4mC:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app\app\page.tsx[0m:644:1]
+ [2m644[0m |   });
+ [2m645[0m | 
+ [2m646[0m |   return (
+ [2m647[0m |     <>
+     : [31;1m     ^[0m
+ [2m648[0m |       <style>{`
+ [2m649[0m |         @keyframes dash-pulse {
+ [2m650[0m |           0%, 100% { opacity: 1; transform: scale(1); }
+     `----
+
+  [31mx[0m Expected ',', got 'style'
+     ,-[[36;1;4mC:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app\app\page.tsx[0m:651:1]
+ [2m651[0m |           50% { opacity: 0.5; transform: scale(0.75); }
+ [2m652[0m |         }
+ [2m653[0m |       `}</style>
+ [2m654[0m |       <div style={{ background: '#f5f5f7', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+     : [31;1m           ^^^^^[0m
+ [2m655[0m |       {/* Header */}
+ [2m656[0m |       <div style={{ background: '#ffffff', borderBottom: '1px solid #e8e8ed', color: '#1d1d1f', padding: '28px 24px' }}>
+ [2m657[0m |         <div style={{ maxWidth: '100%', margin: '0 auto', padding: '0 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+     `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/page.tsx
+
+
+> Build failed because of webpack errors

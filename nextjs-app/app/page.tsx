@@ -1210,23 +1210,60 @@ export default function DashboardPage() {
                 >
                   上一页
                 </button>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {Array.from({ length: Math.ceil(sortedAccounts.length / pageSize) }, (_, i) => i + 1).map(p => (
-                    <button
-                      key={p}
-                      onClick={() => setPageNum(p)}
-                      style={{
-                        width: 32, height: 32, borderRadius: 8, border: '1px solid #d2d2d7',
-                        fontSize: 13, fontWeight: p === pageNum ? 700 : 400,
-                        background: p === pageNum ? '#0071e3' : '#fff',
-                        color: p === pageNum ? '#fff' : '#1d1d1f',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
+                {(() => {
+                  const totalPages = Math.ceil(sortedAccounts.length / pageSize);
+                  const renderPages = (total: number, current: number) => {
+                    const delta = 2;
+                    const range = [];
+                    const rangeWithDots = [];
+                    let l;
+                    for (let i = 1; i <= total; i++) {
+                      if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+                        range.push(i);
+                      }
+                    }
+                    for (let i of range) {
+                      if (l) {
+                        if (i - l === 2) {
+                          rangeWithDots.push(l + 1);
+                        } else if (i - l !== 1) {
+                          rangeWithDots.push('...');
+                        }
+                      }
+                      rangeWithDots.push(i);
+                      l = i;
+                    }
+                    return rangeWithDots;
+                  };
+
+                  const pages = renderPages(totalPages, pageNum);
+                  return (
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {pages.map((p, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => typeof p === 'number' && setPageNum(p)}
+                          disabled={p === '...'}
+                          style={{
+                            width: p === '...' ? 'auto' : 32,
+                            height: 32,
+                            borderRadius: 8,
+                            border: '1px solid #d2d2d7',
+                            fontSize: 13,
+                            fontWeight: p === pageNum ? 700 : 400,
+                            background: p === pageNum ? '#0071e3' : '#fff',
+                            color: p === pageNum ? '#fff' : '#1d1d1f',
+                            cursor: p === '...' ? 'default' : 'pointer',
+                            padding: p === '...' ? '0 8px' : 0,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
                 <button
                   onClick={() => setPageNum(v => Math.min(Math.ceil(sortedAccounts.length / pageSize), v + 1))}
                   disabled={pageNum >= Math.ceil(sortedAccounts.length / pageSize)}
@@ -1385,23 +1422,60 @@ export default function DashboardPage() {
                 >
                   上一页
                 </button>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {Array.from({ length: Math.ceil(sortedAccounts.length / pageSize) }, (_, i) => i + 1).map(p => (
-                    <button
-                      key={p}
-                      onClick={() => setPageNum(p)}
-                      style={{
-                        width: 32, height: 32, borderRadius: 8, border: '1px solid #d2d2d7',
-                        fontSize: 13, fontWeight: p === pageNum ? 700 : 400,
-                        background: p === pageNum ? '#0071e3' : '#fff',
-                        color: p === pageNum ? '#fff' : '#1d1d1f',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
+                {(() => {
+                  const totalPages = Math.ceil(sortedAccounts.length / pageSize);
+                  const renderPages = (total: number, current: number) => {
+                    const delta = 2;
+                    const range = [];
+                    const rangeWithDots = [];
+                    let l;
+                    for (let i = 1; i <= total; i++) {
+                      if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+                        range.push(i);
+                      }
+                    }
+                    for (let i of range) {
+                      if (l) {
+                        if (i - l === 2) {
+                          rangeWithDots.push(l + 1);
+                        } else if (i - l !== 1) {
+                          rangeWithDots.push('...');
+                        }
+                      }
+                      rangeWithDots.push(i);
+                      l = i;
+                    }
+                    return rangeWithDots;
+                  };
+
+                  const pages = renderPages(totalPages, pageNum);
+                  return (
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {pages.map((p, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => typeof p === 'number' && setPageNum(p)}
+                          disabled={p === '...'}
+                          style={{
+                            width: p === '...' ? 'auto' : 32,
+                            height: 32,
+                            borderRadius: 8,
+                            border: '1px solid #d2d2d7',
+                            fontSize: 13,
+                            fontWeight: p === pageNum ? 700 : 400,
+                            background: p === pageNum ? '#0071e3' : '#fff',
+                            color: p === pageNum ? '#fff' : '#1d1d1f',
+                            cursor: p === '...' ? 'default' : 'pointer',
+                            padding: p === '...' ? '0 8px' : 0,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
                 <button
                   onClick={() => setPageNum(v => Math.min(Math.ceil(sortedAccounts.length / pageSize), v + 1))}
                   disabled={pageNum >= Math.ceil(sortedAccounts.length / pageSize)}

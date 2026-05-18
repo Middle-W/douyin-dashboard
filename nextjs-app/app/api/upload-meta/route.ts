@@ -34,13 +34,12 @@ async function ensureFields(headers: string[]) {
 
   for (const h of headers) {
     const key = getFieldKey(h);
-    if (key === 'name') continue;
     if (!existingKeys.has(key)) {
       toInsert.push({
         key,
         label: h.trim(),
         show_in_admin: true,
-        show_in_dashboard: false,
+        show_in_dashboard: key === 'name',
         sort_order: sortOrder++,
       });
       existingKeys.add(key);

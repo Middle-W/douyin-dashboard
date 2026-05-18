@@ -1,0 +1,47 @@
+ ⚠ Invalid next.config.js options detected: 
+ ⚠     Unrecognized key(s) in object: 'api'
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+  ▲ Next.js 14.2.0
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/12) ...
+   Generating static pages (3/12) 
+   Generating static pages (6/12) 
+   Generating static pages (9/12) 
+ ✓ Generating static pages (12/12)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+┌ ○ /                                    11.1 kB         168 kB
+├ ○ /_not-found                          871 B          87.7 kB
+├ ○ /admin                               9.02 kB        95.8 kB
+├ ƒ /api/account-fields                  0 B                0 B
+├ ƒ /api/account-fields/[id]             0 B                0 B
+├ ƒ /api/accounts                        0 B                0 B
+├ ƒ /api/accounts/[name]                 0 B                0 B
+├ ƒ /api/dashboard                       0 B                0 B
+├ ƒ /api/data-costs                      0 B                0 B
+├ ƒ /api/data-stats                      0 B                0 B
+├ ƒ /api/import-cost-json                0 B                0 B
+├ ƒ /api/import-daily-stats              0 B                0 B
+├ ƒ /api/test-excel                      0 B                0 B
+├ ƒ /api/upload                          0 B                0 B
+├ ƒ /api/upload-cost                     0 B                0 B
+├ ƒ /api/upload-meta                     0 B                0 B
+├ ○ /icon.svg                            0 B                0 B
+├ ƒ /mobile                              4.12 kB         161 kB
+└ ○ /test-excel                          1.53 kB        88.4 kB
++ First Load JS shared by all            86.8 kB
+  ├ chunks/23-be6b2d2e972ab345.js        31.3 kB
+  ├ chunks/fd9d1056-4b87d5bb1aa946b3.js  53.6 kB
+  └ other shared chunks (total)          1.84 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

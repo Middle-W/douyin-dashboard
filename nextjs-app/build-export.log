@@ -1,0 +1,28 @@
+ ⚠ Invalid next.config.js options detected: 
+ ⚠     Unrecognized key(s) in object: 'api'
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+  ▲ Next.js 14.2.0
+  - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+Error: export const dynamic = "force-dynamic" on page "/api/account-fields/[id]" cannot be used with "output: export". See more info here: https://nextjs.org/docs/advanced-features/static-html-export
+    at new eS (C:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app\node_modules\next\dist\compiled\next-server\app-route.runtime.prod.js:6:25410)
+    at 2614 (C:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app\.next\server\app\api\account-fields\[id]\route.js:1:1526)
+    at t (C:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app\.next\server\webpack-runtime.js:1:127)
+    at s (C:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app\.next\server\app\api\account-fields\[id]\route.js:1:2569)
+    at C:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app\.next\server\app\api\account-fields\[id]\route.js:1:2604
+    at t.X (C:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app\.next\server\webpack-runtime.js:1:1191)
+    at C:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app\.next\server\app\api\account-fields\[id]\route.js:1:2582
+    at Object.<anonymous> (C:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app\.next\server\app\api\account-fields\[id]\route.js:1:2631)
+    at Module._compile (node:internal/modules/cjs/loader:1812:14)
+    at Object..js (node:internal/modules/cjs/loader:1943:10)
+
+> Build error occurred
+Error: Failed to collect page data for /api/account-fields/[id]
+    at C:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app\node_modules\next\dist\build\utils.js:1268:15
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  type: 'Error'
+}
