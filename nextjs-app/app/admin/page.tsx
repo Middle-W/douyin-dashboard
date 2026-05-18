@@ -313,7 +313,11 @@ export default function AdminPage() {
   const removeAccount = async (name: string) => {
     if (!confirm('确定删除账号 "' + name + '" 吗？')) return;
     try {
-      const res = await fetch('/api/accounts/' + encodeURIComponent(name), { method: 'DELETE' });
+      const res = await fetch('/api/accounts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ names: [name] })
+      });
       const json = await res.json();
       if (json.error) throw new Error(json.error);
       setMessage('删除成功');
