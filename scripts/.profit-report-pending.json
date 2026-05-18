@@ -1,0 +1,1022 @@
+{
+  "timestamp": "2026-05-15T05:14:53.132Z",
+  "date": "2026-05-15",
+  "timeStr": "13:14",
+  "card": {
+    "header": {
+      "title": {
+        "tag": "plain_text",
+        "content": "📊 利润日报 2026-05-15"
+      },
+      "template": "green"
+    },
+    "elements": [
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "**推送时间**：13:14 | **对比基准**：上一轮采集"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "💰 **合计**：102个账号 | 消耗 1802.31 元 | 利润 🟢 885.11 元"
+        }
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "🔻 **损 31 条**"
+        }
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "plain_text",
+          "content": "第 1-20 条（1/6）"
+        }
+      },
+      {
+        "tag": "table",
+        "columns": [
+          {
+            "name": "account",
+            "display_name": "账号",
+            "width": "auto"
+          },
+          {
+            "name": "cost",
+            "display_name": "消耗(元)",
+            "width": "auto"
+          },
+          {
+            "name": "profit",
+            "display_name": "利润(元)",
+            "width": "auto"
+          },
+          {
+            "name": "costDelta",
+            "display_name": "消耗增量",
+            "width": "auto"
+          },
+          {
+            "name": "profitDelta",
+            "display_name": "利润增量",
+            "width": "auto"
+          }
+        ],
+        "rows": [
+          {
+            "account": "沛灵甄选",
+            "cost": "43.82",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "雪月好物",
+            "cost": "6.34",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "清风好物铺",
+            "cost": "12.59",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "暗香优品",
+            "cost": "17.40",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "飞云好物铺",
+            "cost": "144.52",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "晓梦优品",
+            "cost": "12.85",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "沛绿百货分享",
+            "cost": "8.80",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "江心好物",
+            "cost": "15.72",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "璞玉优品",
+            "cost": "1.66",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "幽兰好物",
+            "cost": "10.02",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "飞雪甄选",
+            "cost": "27.25",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "静幽好物",
+            "cost": "27.81",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "雅集优选",
+            "cost": "4.67",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "巧思甄选",
+            "cost": "2.96",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "时光优品铺",
+            "cost": "6.75",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "星河好物馆",
+            "cost": "3.60",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "琼枝好物",
+            "cost": "84.67",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "雨墨优品",
+            "cost": "22.27",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "风语好物",
+            "cost": "13.45",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "羽洛好物铺",
+            "cost": "7.10",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          }
+        ]
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "plain_text",
+          "content": "第 21-40 条（2/6）"
+        }
+      },
+      {
+        "tag": "table",
+        "columns": [
+          {
+            "name": "account",
+            "display_name": "账号",
+            "width": "auto"
+          },
+          {
+            "name": "cost",
+            "display_name": "消耗(元)",
+            "width": "auto"
+          },
+          {
+            "name": "profit",
+            "display_name": "利润(元)",
+            "width": "auto"
+          },
+          {
+            "name": "costDelta",
+            "display_name": "消耗增量",
+            "width": "auto"
+          },
+          {
+            "name": "profitDelta",
+            "display_name": "利润增量",
+            "width": "auto"
+          }
+        ],
+        "rows": [
+          {
+            "account": "浮岛百货",
+            "cost": "6.59",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "知秋好物推荐",
+            "cost": "2.73",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "阿梨甄选",
+            "cost": "19.76",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "鹿屿甄选",
+            "cost": "4.42",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "海平好物",
+            "cost": "11.84",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "燕语优品",
+            "cost": "3.22",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "雾凇好物",
+            "cost": "33.25",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "翠微好物",
+            "cost": "5.88",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "初雨甄选",
+            "cost": "7.93",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "光遇优品",
+            "cost": "0.44",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "季风精选馆",
+            "cost": "5.26",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "西柚的小铺",
+            "cost": "7.79",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "玻璃海商店",
+            "cost": "4.06",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "青林优品",
+            "cost": "2.41",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "紫霄严选",
+            "cost": "74.73",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "雨市好物",
+            "cost": "30.13",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "星夏甄选",
+            "cost": "6.13",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "听风百货",
+            "cost": "69.21",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "晚凉好物店",
+            "cost": "7.89",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "宋玉甄选",
+            "cost": "8.89",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          }
+        ]
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "plain_text",
+          "content": "第 41-60 条（3/6）"
+        }
+      },
+      {
+        "tag": "table",
+        "columns": [
+          {
+            "name": "account",
+            "display_name": "账号",
+            "width": "auto"
+          },
+          {
+            "name": "cost",
+            "display_name": "消耗(元)",
+            "width": "auto"
+          },
+          {
+            "name": "profit",
+            "display_name": "利润(元)",
+            "width": "auto"
+          },
+          {
+            "name": "costDelta",
+            "display_name": "消耗增量",
+            "width": "auto"
+          },
+          {
+            "name": "profitDelta",
+            "display_name": "利润增量",
+            "width": "auto"
+          }
+        ],
+        "rows": [
+          {
+            "account": "鲸落百货",
+            "cost": "1.99",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "轻奢优品阁",
+            "cost": "6.56",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "潮汐优品",
+            "cost": "1.25",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "时宜甄选",
+            "cost": "6.00",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "湖畔甄选",
+            "cost": "8.74",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "阡陌好物推荐",
+            "cost": "0.84",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "月下优品",
+            "cost": "6.20",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "盐风百货",
+            "cost": "0.00",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "木槿好物分享",
+            "cost": "3.79",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "星星百货推荐",
+            "cost": "49.39",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "万水百货优选",
+            "cost": "17.43",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "芸橙优选",
+            "cost": "4.42",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "七日好物",
+            "cost": "4.71",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "水韵臻品铺",
+            "cost": "0.31",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "云天优品",
+            "cost": "24.74",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "漫步优品",
+            "cost": "6.81",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "元瑶甄选",
+            "cost": "15.09",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "时差好物分享",
+            "cost": "2.02",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "香初优品",
+            "cost": "575.83",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "香山好物",
+            "cost": "1.53",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          }
+        ]
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "plain_text",
+          "content": "第 61-80 条（4/6）"
+        }
+      },
+      {
+        "tag": "table",
+        "columns": [
+          {
+            "name": "account",
+            "display_name": "账号",
+            "width": "auto"
+          },
+          {
+            "name": "cost",
+            "display_name": "消耗(元)",
+            "width": "auto"
+          },
+          {
+            "name": "profit",
+            "display_name": "利润(元)",
+            "width": "auto"
+          },
+          {
+            "name": "costDelta",
+            "display_name": "消耗增量",
+            "width": "auto"
+          },
+          {
+            "name": "profitDelta",
+            "display_name": "利润增量",
+            "width": "auto"
+          }
+        ],
+        "rows": [
+          {
+            "account": "如梦甄选",
+            "cost": "1.56",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "赏心优品",
+            "cost": "5.04",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "绿洲优品",
+            "cost": "0.74",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "薄暮百货",
+            "cost": "5.36",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "多宝严选",
+            "cost": "16.47",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "锦汐甄选",
+            "cost": "1.45",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "次元优选",
+            "cost": "5.12",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "烟雨好物铺",
+            "cost": "6.08",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "云深好物",
+            "cost": "14.23",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "桐花好物",
+            "cost": "0.33",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "惠琪好物",
+            "cost": "0.00",
+            "profit": "🟢",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "霜华优品",
+            "cost": "0.06",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "陆芝百货",
+            "cost": "9.51",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "星空好物铺",
+            "cost": "1.27",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "岛风严选",
+            "cost": "1.55",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "青森好物铺",
+            "cost": "0.62",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "绿松甄选",
+            "cost": "3.35",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "玉兰好物分享",
+            "cost": "1.87",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "苔衣精选",
+            "cost": "4.68",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "碧落好物",
+            "cost": "16.11",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          }
+        ]
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "plain_text",
+          "content": "第 81-100 条（5/6）"
+        }
+      },
+      {
+        "tag": "table",
+        "columns": [
+          {
+            "name": "account",
+            "display_name": "账号",
+            "width": "auto"
+          },
+          {
+            "name": "cost",
+            "display_name": "消耗(元)",
+            "width": "auto"
+          },
+          {
+            "name": "profit",
+            "display_name": "利润(元)",
+            "width": "auto"
+          },
+          {
+            "name": "costDelta",
+            "display_name": "消耗增量",
+            "width": "auto"
+          },
+          {
+            "name": "profitDelta",
+            "display_name": "利润增量",
+            "width": "auto"
+          }
+        ],
+        "rows": [
+          {
+            "account": "落霞优品舍",
+            "cost": "5.00",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "星辰好物铺",
+            "cost": "1.76",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "清昕小铺",
+            "cost": "3.78",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "林森优品",
+            "cost": "17.93",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "琉光优品",
+            "cost": "1.86",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "山花好物推荐",
+            "cost": "1.88",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "知画小铺",
+            "cost": "2.20",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "锡月生活坊",
+            "cost": "27.01",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "温莎好物",
+            "cost": "2.70",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "竹影好物分享",
+            "cost": "15.94",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "银月甄选",
+            "cost": "7.92",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "紫灵甄选",
+            "cost": "9.03",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "月光优品铺",
+            "cost": "5.15",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "玉叶好物",
+            "cost": "6.05",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "文雅好物铺",
+            "cost": "7.11",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "拾光百货店",
+            "cost": "9.43",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "霁月优品铺",
+            "cost": "10.01",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "晚霞优品",
+            "cost": "6.37",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "象限百货",
+            "cost": "6.52",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "星苔百货",
+            "cost": "10.07",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          }
+        ]
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "plain_text",
+          "content": "第 101-102 条（6/6）"
+        }
+      },
+      {
+        "tag": "table",
+        "columns": [
+          {
+            "name": "account",
+            "display_name": "账号",
+            "width": "auto"
+          },
+          {
+            "name": "cost",
+            "display_name": "消耗(元)",
+            "width": "auto"
+          },
+          {
+            "name": "profit",
+            "display_name": "利润(元)",
+            "width": "auto"
+          },
+          {
+            "name": "costDelta",
+            "display_name": "消耗增量",
+            "width": "auto"
+          },
+          {
+            "name": "profitDelta",
+            "display_name": "利润增量",
+            "width": "auto"
+          }
+        ],
+        "rows": [
+          {
+            "account": "甜桃好物",
+            "cost": "9.32",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          },
+          {
+            "account": "云水优品",
+            "cost": "15.41",
+            "profit": "🔴",
+            "costDelta": "➖ +0.00",
+            "profitDelta": "➖ +0.00"
+          }
+        ]
+      },
+      {
+        "tag": "hr"
+      },
+      {
+        "tag": "div",
+        "text": {
+          "tag": "lark_md",
+          "content": "📈 消耗增量：➖ +0.00 | 利润增量：➖ +0.00 | 对比基准：上一轮采集"
+        }
+      }
+    ]
+  },
+  "summary": {
+    "totalAccounts": 102,
+    "totalCost": 1802.3099999999997,
+    "totalIncome": 2687.419999999999,
+    "totalProfit": 885.1100000000001,
+    "totalCostDelta": 0,
+    "totalProfitDelta": 0,
+    "lossCount": 31
+  }
+}

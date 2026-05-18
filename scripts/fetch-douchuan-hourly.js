@@ -10,7 +10,7 @@ const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 
-const STATE_FILE = path.join(__dirname, '.douchuan-state.json');
+const STATE_FILE = path.join(__dirname, '.douchuan-state-company.json');
 
 const CONFIG = {
   douchuanUrl: 'https://dy.douchuanec.com/#/qy_balance',

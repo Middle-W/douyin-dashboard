@@ -1,15 +1,8 @@
 @echo off
-:: 抖川小时级采集 - 当天数据（每小时的 35 分运行）
-:: Check if localhost:3000 is already running
-netstat -an | find "3000" | find "LISTENING" >nul
-if %errorlevel% neq 0 (
-    echo [定时任务] 本地服务未运行，正在启动...
-    start /min cmd /c "cd /d ""C:\Users\W\Desktop\Kimi Code\douyin-dashboard\nextjs-app"" && ""C:\Program Files\nodejs\npm.cmd"" run dev"
-    timeout /t 25 /nobreak >nul
-    echo [定时任务] 等待服务启动完成
-)
+:: 抖川小时级采集 - 公司版（每小时的 35 分运行）
+:: 推送到公司服务器
 
-cd /d "C:\Users\W\Desktop\Kimi Code\douyin-dashboard\scripts"
-set API_URL=http://localhost:3000/api/import-cost-json
+cd /d "C:\Users\W\Desktop\Kimi Code\douyin-dashboard-company\scripts"
+set API_URL=http://150.109.158.191:3000/api/import-cost-json
 set HEADLESS=true
 "C:\Program Files\nodejs\node.exe" fetch-douchuan-hourly.js

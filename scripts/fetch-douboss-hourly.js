@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 
 // ==================== 配置 ====================
-const STATE_FILE = path.join(__dirname, '.storage-state.json');
+const STATE_FILE = path.join(__dirname, '.storage-state-company.json');
 
 const CONFIG = {
   // 抖老板账号排行页面
