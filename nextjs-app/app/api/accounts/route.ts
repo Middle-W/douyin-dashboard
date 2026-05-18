@@ -94,3 +94,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
+
+// DELETE /api/accounts - Batch delete accounts (body: { names: string[] })
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const names = body.names;
+
+    if (!Array.isArray(names) || names.length === 0) {
+      return NextResponse.json({ error: '缺少 names 参数' }, { status: 400 });
+    }
+
+    // Supabase 批量删除：.in('name', names)
+    const { error } = await supabaseAdmin
+      .from('accounts')
+      .delete()
+      .in('name', names);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, deleted: names.length });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}

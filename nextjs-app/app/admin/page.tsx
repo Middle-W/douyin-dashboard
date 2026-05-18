@@ -324,16 +324,18 @@ export default function AdminPage() {
   const batchRemoveAccounts = async () => {
     if (selectedAccounts.size === 0) { setMessage('请先选择要删除的账号'); return; }
     if (!confirm(`确定删除选中的 ${selectedAccounts.size} 个账号？`)) return;
-    let success = 0, fail = 0;
-    for (const name of selectedAccounts) {
-      try {
-        const res = await fetch('/api/accounts/' + encodeURIComponent(name), { method: 'DELETE' });
-        const json = await res.json();
-        if (json.error) { fail++; continue; }
-        success++;
-      } catch { fail++; }
+    try {
+      const res = await fetch('/api/accounts', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ names: Array.from(selectedAccounts) })
+      });
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+      setMessage(`删除完成：成功 ${json.deleted} 条`);
+    } catch (e: any) {
+      setMessage(e.message);
     }
-    setMessage(`删除完成：成功 ${success} 条${fail > 0 ? `，失败 ${fail} 条` : ''}`);
     setSelectedAccounts(new Set());
     loadAccounts();
   };
