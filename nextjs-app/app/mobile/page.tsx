@@ -116,9 +116,12 @@ export default function MobileDashboardPage() {
   const [dateTo, setDateTo] = useState('');
   const [sortDesc, setSortDesc] = useState(true);
 
+  const PAGE_SIZE_OPTIONS = [10, 20, 50];
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(() => {
+    try { const s = parseInt(localStorage.getItem('mobile_page_size') || '10'); return PAGE_SIZE_OPTIONS.includes(s) ? s : 10; } catch { return 10; }
+  });
   const [showMoreFilter, setShowMoreFilter] = useState(false);
 
   /* 更多筛选维度 */
@@ -503,29 +506,89 @@ export default function MobileDashboardPage() {
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div style={{ margin: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10 }}>
-          <button
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={page === 1}
-            style={{
-              padding: '6px 14px', borderRadius: 20, fontSize: 12, border: 'none',
-              cursor: page === 1 ? 'not-allowed' : 'pointer',
-              background: page === 1 ? '#f5f5f7' : '#0071e3', color: page === 1 ? '#a1a1a6' : 'white', fontWeight: 600,
+      <div style={{ margin: '16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              const v = parseInt(e.target.value);
+              setPageSize(v);
+              setPage(1);
+              try { localStorage.setItem('mobile_page_size', String(v)); } catch {}
             }}
-          >上一页</button>
-          <span style={{ fontSize: 13, color: '#515154', fontWeight: 600, minWidth: 50, textAlign: 'center' }}>{page} / {totalPages}</span>
-          <button
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
-            style={{
-              padding: '6px 14px', borderRadius: 20, fontSize: 12, border: 'none',
-              cursor: page === totalPages ? 'not-allowed' : 'pointer',
-              background: page === totalPages ? '#f5f5f7' : '#0071e3', color: page === totalPages ? '#a1a1a6' : 'white', fontWeight: 600,
-            }}
-          >下一页</button>
+            style={{ padding: '5px 8px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 12, color: '#1d1d1f', background: '#fff', cursor: 'pointer', outline: 'none' }}
+          >
+            {PAGE_SIZE_OPTIONS.map(s => <option key={s} value={s}>{s}条/页</option>)}
+          </select>
+          <span style={{ fontSize: 12, color: '#86868b' }}>共 {sortedAccounts.length} 条</span>
         </div>
-      )}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              onClick={() => setPage(v => Math.max(1, v - 1))}
+              disabled={page <= 1}
+              style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 12, background: '#fff', color: page <= 1 ? '#c7c7cc' : '#0071e3', cursor: page <= 1 ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+            >上一页</button>
+            {(() => {
+              const renderPages = (total: number, current: number) => {
+                const delta = 1;
+                const range: number[] = [];
+                const rangeWithDots: (number | string)[] = [];
+                let l: number | undefined;
+                for (let i = 1; i <= total; i++) {
+                  if (i === 1 || i === total || (i >= current - delta && i <= current + delta)) {
+                    range.push(i);
+                  }
+                }
+                for (let i of range) {
+                  if (l) {
+                    if (i - l === 2) {
+                      rangeWithDots.push(l + 1);
+                    } else if (i - l !== 1) {
+                      rangeWithDots.push('...');
+                    }
+                  }
+                  rangeWithDots.push(i);
+                  l = i;
+                }
+                return rangeWithDots;
+              };
+              const pages = renderPages(totalPages, page);
+              return (
+                <div style={{ display: 'flex', gap: 3 }}>
+                  {pages.map((p, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => typeof p === 'number' && setPage(p)}
+                      disabled={p === '...'}
+                      style={{
+                        width: p === '...' ? 'auto' : 28,
+                        height: 28,
+                        borderRadius: 6,
+                        border: '1px solid #d2d2d7',
+                        fontSize: 12,
+                        fontWeight: p === page ? 700 : 400,
+                        background: p === page ? '#0071e3' : '#fff',
+                        color: p === page ? '#fff' : '#1d1d1f',
+                        cursor: p === '...' ? 'default' : 'pointer',
+                        padding: p === '...' ? '0 4px' : 0,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
+            <button
+              onClick={() => setPage(v => Math.min(totalPages, v + 1))}
+              disabled={page >= totalPages}
+              style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid #d2d2d7', fontSize: 12, background: '#fff', color: page >= totalPages ? '#c7c7cc' : '#0071e3', cursor: page >= totalPages ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+            >下一页</button>
+          </div>
+        )}
+      </div>
 
       {/* Bottom Date Filter Bar */}
       <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#ffffff', borderTop: '1px solid #e8e8ed', padding: '6px 10px', display: 'flex', gap: 6, overflowX: 'auto', zIndex: 100, boxShadow: '0 -2px 10px rgba(0,0,0,0.04)' }}>
