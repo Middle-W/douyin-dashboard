@@ -106,26 +106,29 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE /api/data-costs
+// DELETE /api/data-costs - 支持单条删除(account_name+date) 或 批量删除(仅date)
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const account_name = searchParams.get('account_name');
     const date = searchParams.get('date');
 
-    if (!account_name || !date) {
-      return NextResponse.json({ error: 'account_name and date are required' }, { status: 400, headers: corsHeaders });
+    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return NextResponse.json({ error: 'date is required (YYYY-MM-DD)' }, { status: 400, headers: corsHeaders });
     }
 
-    const { error } = await supabaseAdmin
-      .from('daily_costs')
-      .delete()
-      .eq('account_name', account_name)
-      .eq('date', date);
+    let query = supabaseAdmin.from('daily_costs').delete().eq('date', date);
+    
+    // 如果指定了 account_name，只删这一条；否则删除该日期全部
+    if (account_name) {
+      query = query.eq('account_name', account_name);
+    }
+
+    const { error, count } = await query;
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true }, { headers: corsHeaders });
+    return NextResponse.json({ success: true, deleted: count || 0 }, { headers: corsHeaders });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500, headers: corsHeaders });
   }

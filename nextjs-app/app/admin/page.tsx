@@ -424,6 +424,24 @@ export default function AdminPage() {
 
   const batchDeleteData = async (tab: 'stats'|'costs') => {
     if (selectedKeys.size === 0) { setDataMsg('请先选择要删除的数据'); return; }
+    
+    // 如果全选了，直接按日期批量删除（秒删）
+    if (selectedKeys.size === dataList.length) {
+      if (!confirm(`确定删除 ${dataDate} 的全部 ${dataList.length} 条${tab === 'stats' ? '统计数据' : '消耗数据'}？`)) return;
+      setDataMsg('');
+      try {
+        const api = tab === 'stats' ? '/api/data-stats' : '/api/data-costs';
+        const res = await fetch(`${api}?date=${dataDate}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (json.error) throw new Error(json.error);
+        setDataMsg(`删除完成：成功 ${json.deleted || dataList.length} 条`);
+      } catch (e: any) { setDataMsg(e.message); }
+      setSelectedKeys(new Set());
+      loadData(tab, dataDate);
+      return;
+    }
+    
+    // 部分选中，逐条删除
     if (!confirm(`确定批量删除选中的 ${selectedKeys.size} 条数据吗？`)) return;
     setDataMsg('');
     let success = 0, fail = 0;
