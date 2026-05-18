@@ -15,6 +15,13 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
 
+// 从detail文本中提取户ID（10位以上数字）
+function extractId(detail: string): string {
+  if (!detail) return '';
+  const match = detail.match(/户ID[：:\s]*(\d{10,})/);
+  return match ? match[1] : '';
+}
+
 export async function POST(request: NextRequest) {
   let date = '';
   let rawCosts: any[] = [];
@@ -31,9 +38,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No cost data provided' }, { status: 400, headers: corsHeaders });
     }
 
-    // Fetch all account names for prefix matching
-    const { data: allAccounts } = await supabaseAdmin.from('accounts').select('name');
-    const accountNames = (allAccounts || []).map((a: any) => a.name);
+    // Fetch accounts with metadata (contains 户ID)
+    const { data: allAccounts } = await supabaseAdmin.from('accounts').select('name, metadata');
+    
+    // Build maps: 户ID -> name, and name -> name
+    const idToName: Record<string, string> = {};
+    const nameToName: Record<string, string> = {};
+    
+    for (const acc of allAccounts || []) {
+      const name = acc.name;
+      nameToName[name] = name;
+      
+      // Extract 户ID from metadata
+      const metadata = acc.metadata || {};
+      const id = metadata['户id'] || metadata['户ID'] || metadata['uid'] || '';
+      if (id && typeof id === 'string') {
+        idToName[id] = name;
+      }
+    }
 
     const nameMap: Record<string, string> = {};
     const unmatched: string[] = [];
@@ -42,21 +64,31 @@ export async function POST(request: NextRequest) {
     for (const item of rawCosts) {
       const rawName = String(item.name || '').trim();
       const cost = parseFloat(item.cost);
+      const detail = String(item.detail || '');
+      
       if (!rawName || isNaN(cost) || cost <= 0) continue;
 
       let resolvedName = nameMap[rawName];
       if (!resolvedName) {
-        if (accountNames.includes(rawName)) {
+        // 1. Try exact name match
+        if (nameToName[rawName]) {
           resolvedName = rawName;
         } else {
-          const prefixMatch = accountNames.find(n => n.startsWith(rawName));
-          if (prefixMatch) resolvedName = prefixMatch;
-          else {
-            const includeMatch = accountNames.find(n => n.includes(rawName));
-            if (includeMatch) resolvedName = includeMatch;
+          // 2. Try ID match (from detail text)
+          const id = extractId(detail);
+          if (id && idToName[id]) {
+            resolvedName = idToName[id];
+          } else {
+            // 3. Fallback to fuzzy name matching
+            const prefixMatch = Object.keys(nameToName).find(n => n.startsWith(rawName));
+            if (prefixMatch) resolvedName = prefixMatch;
             else {
-              const reverseMatch = accountNames.find(n => rawName.includes(n) && n.length >= 2);
-              if (reverseMatch) resolvedName = reverseMatch;
+              const includeMatch = Object.keys(nameToName).find(n => n.includes(rawName));
+              if (includeMatch) resolvedName = includeMatch;
+              else {
+                const reverseMatch = Object.keys(nameToName).find(n => rawName.includes(n) && n.length >= 2);
+                if (reverseMatch) resolvedName = reverseMatch;
+              }
             }
           }
         }
@@ -76,7 +108,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (costs.length === 0) {
-      // 保存到 pending-errors
       savePending('costs', date, rawCosts, 'No valid cost data after matching', unmatched);
       return NextResponse.json({
         error: 'No valid cost data after matching',
@@ -84,12 +115,11 @@ export async function POST(request: NextRequest) {
         debug: {
           totalReceived: rawCosts.length,
           sampleNames: rawCosts.slice(0, 20).map((c: any) => String(c.name || '').trim()),
-          dbNames: accountNames.slice(0, 50),
         }
       }, { status: 400, headers: corsHeaders });
     }
 
-    // 如果有未匹配的，也保存到 pending（方便后续处理）
+    // Save partial unmatched to pending
     if (unmatched.length > 0) {
       savePending('costs', date, rawCosts, `Partial match: ${costs.length}/${rawCosts.length} matched, ${unmatched.length} unmatched`, unmatched);
     }
@@ -112,7 +142,6 @@ export async function POST(request: NextRequest) {
     }, { headers: corsHeaders });
 
   } catch (err: any) {
-    // 保存到 pending-errors
     savePending('costs', date, rawCosts, err.message);
     return NextResponse.json({ error: err.message }, { status: 500, headers: corsHeaders });
   }
