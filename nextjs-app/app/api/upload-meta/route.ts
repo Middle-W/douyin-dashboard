@@ -2,25 +2,67 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 
-async function setupDefaultFields() {
-  const { data: existing } = await supabaseAdmin.from('account_fields').select('key');
+/**
+ * 将中文表头转换为安全的字段key（英文标识）
+ * 保留常见映射，未知列转为拼音或清理后的英文名
+ */
+const HEADER_MAP: Record<string, string> = {
+  '账号名称': 'name',
+  '抖音名称': 'name',
+  '名称': 'name',
+  '类型': 'account_type',
+  '账号类型': 'account_type',
+  '状态': 'status',
+  '账号状态': 'status',
+  '选品人': 'buyer',
+  '买家': 'buyer',
+  '编号': 'code',
+  'code': 'code',
+  '备注': 'remark',
+  'remark': 'remark',
+  '运营人': 'operator',
+  'operator': 'operator',
+  '备用': 'operator',
+};
+
+function getFieldKey(header: string): string {
+  const h = header.trim();
+  // 常见映射
+  if (HEADER_MAP[h]) return HEADER_MAP[h];
+  // 清理为安全的key：去掉空格和特殊字符，转为小写
+  return h.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_').toLowerCase();
+}
+
+async function ensureFields(headers: string[]) {
+  // 获取现有字段
+  const { data: existing } = await supabaseAdmin.from('account_fields').select('key, label');
   const existingKeys = new Set((existing || []).map(f => f.key));
-  
-  const defaults = [
-    { key: 'name', label: '账号名称', show_in_admin: true, show_in_dashboard: true, sort_order: 1 },
-    { key: 'account_type', label: '类型', show_in_admin: true, show_in_dashboard: true, sort_order: 2 },
-    { key: 'status', label: '状态', show_in_admin: true, show_in_dashboard: false, sort_order: 3 },
-    { key: 'buyer', label: '选品人', show_in_admin: true, show_in_dashboard: false, sort_order: 4 },
-    { key: 'code', label: '编号', show_in_admin: true, show_in_dashboard: false, sort_order: 5 },
-    { key: 'remark', label: '备注', show_in_admin: true, show_in_dashboard: false, sort_order: 6 },
-    { key: 'operator', label: '运营人', show_in_admin: true, show_in_dashboard: false, sort_order: 7 },
-  ];
-  
-  const toInsert = defaults.filter(d => !existingKeys.has(d.key));
+
+  const toInsert = [];
+  let sortOrder = (existing || []).length + 1;
+
+  for (const h of headers) {
+    const key = getFieldKey(h);
+    if (key === 'name') continue; // name 是主键，不放入 account_fields
+    if (!existingKeys.has(key)) {
+      toInsert.push({
+        key,
+        label: h.trim(),
+        show_in_admin: true,
+        show_in_dashboard: false,
+        sort_order: sortOrder++,
+      });
+      existingKeys.add(key);
+    }
+  }
+
   if (toInsert.length > 0) {
     const { error } = await supabaseAdmin.from('account_fields').insert(toInsert);
-    if (error) console.error('Setup fields error:', error);
-    else console.log('Inserted default fields:', toInsert.length);
+    if (error) {
+      console.error('Insert fields error:', error);
+    } else {
+      console.log('Inserted fields:', toInsert.map(f => f.key).join(', '));
+    }
   }
 }
 
@@ -41,70 +83,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Empty file' }, { status: 400 });
     }
 
-    // Expected columns: 账号名称/抖音名称, 类型/账号类型, 状态/账号状态, 选品人, 编号, 备注, 运营人
-    const headers = rows[0];
-    const idx: Record<string, number> = {};
-    headers.forEach((h, i) => {
-      const headerStr = String(h || '').trim();
-      if (!idx.name && (headerStr === '抖音名称' || headerStr === '账号名称' || headerStr === '名称')) idx.name = i;
-      if (!idx.type && (headerStr === '类型' || headerStr === '账号类型')) idx.type = i;
-      if (!idx.status && (headerStr === '状态' || headerStr === '账号状态')) idx.status = i;
-      if (!idx.buyer && (headerStr === '选品人' || headerStr === '买家')) idx.buyer = i;
-      if (!idx.code && (headerStr === '编号' || headerStr === 'code')) idx.code = i;
-      if (!idx.remark && (headerStr === '备注' || headerStr === 'remark')) idx.remark = i;
-      if (!idx.operator && (headerStr === '运营人' || headerStr === 'operator' || headerStr === '备用')) idx.operator = i;
-    });
+    const headers = rows[0].map(h => String(h || '').trim());
+    console.log('[upload-meta] Excel headers:', headers);
 
-    if (idx.name === undefined) {
-      return NextResponse.json({ error: 'Invalid file format: need 账号名称 column' }, { status: 400 });
+    // 第一列必须是账号名称
+    const nameKey = getFieldKey(headers[0]);
+    if (nameKey !== 'name') {
+      return NextResponse.json({ error: `第一列必须是"账号名称"，当前是"${headers[0]}"`, status: 400 });
     }
 
-    // Parse rows, dedupe by name (keep last)
+    // 根据表头动态创建字段
+    await ensureFields(headers);
+
+    // 构建列索引
+    const colMap: Record<string, number> = {};
+    headers.forEach((h, i) => {
+      colMap[getFieldKey(h)] = i;
+    });
+
+    // 解析数据
     const recordMap = new Map<string, any>();
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
-      const name = String(row[idx.name] || '').trim();
+      const name = String(row[0] || '').trim();
       if (!name) continue;
 
       const record: any = { name };
-      if (idx.type !== undefined) {
-        const v = String(row[idx.type] || '').trim();
-        record.account_type = v || null;
-      }
-      if (idx.status !== undefined) {
-        const v = String(row[idx.status] || '').trim();
-        record.status = v || null;
-      }
-      if (idx.buyer !== undefined) {
-        const v = String(row[idx.buyer] || '').trim();
-        record.buyer = v || null;
-      }
-      if (idx.code !== undefined) {
-        const v = String(row[idx.code] || '').trim();
-        record.code = v || null;
-      }
-      if (idx.remark !== undefined) {
-        const v = String(row[idx.remark] || '').trim();
-        record.remark = v || null;
-      }
-      if (idx.operator !== undefined) {
-        const v = String(row[idx.operator] || '').trim();
-        record.operator = v || null;
-      }
 
-      // Unknown columns go into metadata
-      const metadata: Record<string, string> = {};
-      for (let colIdx = 0; colIdx < headers.length; colIdx++) {
-        const colName = String(headers[colIdx] || '').trim();
-        if (!colName) continue;
-        if (['编号','抖音名称','账号名称','名称','类型','账号类型','状态','账号状态','选品人','买家','code','备注','remark','运营人','operator','备用'].includes(colName)) continue;
+      // 遍历所有列
+      for (let colIdx = 1; colIdx < headers.length; colIdx++) {
+        const header = headers[colIdx];
+        const key = getFieldKey(header);
         const val = row[colIdx];
         if (val !== undefined && val !== null && String(val).trim() !== '') {
-          metadata[colName] = String(val).trim();
+          record[key] = String(val).trim();
         }
-      }
-      if (Object.keys(metadata).length > 0) {
-        record.metadata = metadata;
       }
 
       recordMap.set(name, record);
@@ -115,36 +128,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No valid rows found' }, { status: 400 });
     }
 
-    // Check duplicate codes within Excel
-    const codeMap = new Map<string, string>();
-    for (const r of updates) {
-      if (r.code) {
-        if (codeMap.has(r.code)) {
-          return NextResponse.json({ error: `Excel 内编号重复："${r.code}" 被 "${codeMap.get(r.code)}" 和 "${r.name}" 同时使用` }, { status: 400 });
-        }
-        codeMap.set(r.code, r.name);
-      }
-    }
-
-    // Check codes against existing database (exclude accounts in this upload)
-    const codesToCheck = updates.filter(r => r.code).map(r => r.code);
-    if (codesToCheck.length > 0) {
-      const namesInUpload = updates.map(r => r.name);
-      const { data: existingCodes } = await supabaseAdmin
-        .from('accounts')
-        .select('name, code')
-        .in('code', codesToCheck)
-        .not('name', 'in', `(${namesInUpload.map(n => `"${n}"`).join(',')})`);
-      if (existingCodes && existingCodes.length > 0) {
-        const first = existingCodes[0];
-        return NextResponse.json({ error: `编号 "${first.code}" 已被账号 "${first.name}" 使用` }, { status: 409 });
-      }
-    }
-
-    console.log(`[upload-meta] Parsed ${updates.length} unique accounts from Excel. Headers:`, headers);
-
-    // 确保 account_fields 表有默认字段
-    await setupDefaultFields();
+    console.log(`[upload-meta] Parsed ${updates.length} unique accounts`);
 
     // Batch upsert
     const batchSize = 500;
@@ -152,11 +136,10 @@ export async function POST(request: NextRequest) {
     const errors: string[] = [];
     for (let i = 0; i < updates.length; i += batchSize) {
       const batch = updates.slice(i, i + batchSize);
-      console.log(`[upload-meta] Upserting batch ${i/batchSize + 1}, size=${batch.length}, first=`, batch[0]?.name);
       const { error } = await supabaseAdmin.from('accounts').upsert(batch, { onConflict: 'name' });
       if (error) {
-        console.error(`[upload-meta] Batch ${i/batchSize + 1} error:`, error);
-        errors.push(`Batch ${i/batchSize + 1}: ${error.message} (code: ${error.code})`);
+        console.error(`[upload-meta] Batch error:`, error);
+        errors.push(`Batch ${i/batchSize + 1}: ${error.message}`);
       } else {
         updated += batch.length;
       }
@@ -166,7 +149,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Partial update failed', details: errors, updated, total: updates.length }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, updated, total: updates.length });
+    return NextResponse.json({ success: true, updated, total: updates.length, fields: headers });
 
   } catch (err: any) {
     console.error('Upload meta error:', err);
