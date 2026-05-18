@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import * as XLSX from 'xlsx';
 
+async function setupDefaultFields() {
+  const { data: existing } = await supabaseAdmin.from('account_fields').select('key');
+  const existingKeys = new Set((existing || []).map(f => f.key));
+  
+  const defaults = [
+    { key: 'name', label: '账号名称', show_in_admin: true, show_in_dashboard: true, sort_order: 1 },
+    { key: 'account_type', label: '类型', show_in_admin: true, show_in_dashboard: true, sort_order: 2 },
+    { key: 'status', label: '状态', show_in_admin: true, show_in_dashboard: false, sort_order: 3 },
+    { key: 'buyer', label: '选品人', show_in_admin: true, show_in_dashboard: false, sort_order: 4 },
+    { key: 'code', label: '编号', show_in_admin: true, show_in_dashboard: false, sort_order: 5 },
+    { key: 'remark', label: '备注', show_in_admin: true, show_in_dashboard: false, sort_order: 6 },
+    { key: 'operator', label: '运营人', show_in_admin: true, show_in_dashboard: false, sort_order: 7 },
+  ];
+  
+  const toInsert = defaults.filter(d => !existingKeys.has(d.key));
+  if (toInsert.length > 0) {
+    const { error } = await supabaseAdmin.from('account_fields').insert(toInsert);
+    if (error) console.error('Setup fields error:', error);
+    else console.log('Inserted default fields:', toInsert.length);
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -120,6 +142,9 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[upload-meta] Parsed ${updates.length} unique accounts from Excel. Headers:`, headers);
+
+    // 确保 account_fields 表有默认字段
+    await setupDefaultFields();
 
     // Batch upsert
     const batchSize = 500;
