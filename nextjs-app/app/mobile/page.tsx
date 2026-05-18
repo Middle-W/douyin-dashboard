@@ -114,9 +114,14 @@ export default function MobileDashboardPage() {
   const [datePreset, setDatePreset] = useState('今日');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
   const [sortKey, setSortKey] = useState<'metric' | 'profit' | 'health'>('metric');
   const [sortDesc, setSortDesc] = useState(true);
+
+  /* 新增：搜索 + 分页 + 状态筛选 */
+  const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(10);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'normal' | 'abnormal'>('all');
 
   const trendCanvasRef = useRef<HTMLCanvasElement>(null);
   const trendChartRef = useRef<any>(null);
@@ -136,7 +141,6 @@ export default function MobileDashboardPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Auto-refresh every 5 minutes
   useEffect(() => {
     const timer = setInterval(() => loadData(), 5 * 60 * 1000);
     return () => clearInterval(timer);
@@ -148,6 +152,9 @@ export default function MobileDashboardPage() {
       if (range) { setDateFrom(range[0]); setDateTo(range[1]); }
     }
   }, [datePreset]);
+
+  /* 筛选条件变化时自动回到第1页 */
+  useEffect(() => { setPage(1); }, [searchQuery, statusFilter, datePreset, sortKey, sortDesc, activeMetric]);
 
   const allAccounts = data?.accounts || [];
 
@@ -173,8 +180,23 @@ export default function MobileDashboardPage() {
     }));
   }, [allAccounts, displayDates]);
 
+  /* 搜索 + 状态过滤 */
+  const filteredAccounts = useMemo(() => {
+    let arr = [...displayAccounts];
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      arr = arr.filter((a: any) => a.account?.toLowerCase().includes(q));
+    }
+    if (statusFilter === 'normal') {
+      arr = arr.filter((a: any) => (a._health?.total || 0) >= 50);
+    } else if (statusFilter === 'abnormal') {
+      arr = arr.filter((a: any) => (a._health?.total || 100) < 50);
+    }
+    return arr;
+  }, [displayAccounts, searchQuery, statusFilter]);
+
   const sortedAccounts = useMemo(() => {
-    const arr = [...displayAccounts];
+    const arr = [...filteredAccounts];
     arr.sort((a: any, b: any) => {
       if (sortKey === 'health') {
         const diff = (a._health?.total || 0) - (b._health?.total || 0);
@@ -188,7 +210,13 @@ export default function MobileDashboardPage() {
       return sortDesc ? -diff : diff;
     });
     return arr;
-  }, [displayAccounts, sortKey, sortDesc, activeMetric]);
+  }, [filteredAccounts, sortKey, sortDesc, activeMetric]);
+
+  /* 分页 */
+  const totalPages = Math.max(1, Math.ceil(sortedAccounts.length / pageSize));
+  const pagedAccounts = useMemo(() => {
+    return sortedAccounts.slice((page - 1) * pageSize, page * pageSize);
+  }, [sortedAccounts, page, pageSize]);
 
   const totals = useMemo(() => {
     return {
@@ -199,17 +227,11 @@ export default function MobileDashboardPage() {
     };
   }, [displayAccounts]);
 
-  const abnormal = useMemo(() => {
-    return displayAccounts
-      .filter((a: any) => (a._health?.total || 100) < 50 && (a.metaStatus === '正常' || !a.metaStatus))
-      .sort((a: any, b: any) => (a._health?.total || 100) - (b._health?.total || 100));
-  }, [displayAccounts]);
-
-  // Trend chart
+  /* 趋势图 */
   useEffect(() => {
     if (!trendCanvasRef.current || !data || displayDates.length === 0) return;
     const cfg = METRIC_CONFIG[activeMetric];
-    const totals = displayDates.map(date => {
+    const trendTotals = displayDates.map(date => {
       return displayAccounts.reduce((s: number, a: any) => s + (a.daily?.[date]?.[activeMetric === 'orders' ? 'orders' : activeMetric === 'netIncome' ? 'netIncome' : activeMetric === 'cost' ? 'cost' : 'profit'] || 0), 0);
     });
 
@@ -220,7 +242,7 @@ export default function MobileDashboardPage() {
         labels: displayDates.map(d => d.slice(5)),
         datasets: [{
           label: cfg.label,
-          data: totals,
+          data: trendTotals,
           borderColor: cfg.color,
           backgroundColor: cfg.color + '18',
           borderWidth: 2,
@@ -258,22 +280,22 @@ export default function MobileDashboardPage() {
   const cfg = METRIC_CONFIG[activeMetric];
 
   return (
-    <div style={{ minHeight: '100vh', paddingBottom: 100 }}>
+    <div style={{ minHeight: '100vh', paddingBottom: 100, background: '#f5f5f7' }}>
       {/* Header */}
-      <div style={{ background: '#ffffff', borderBottom: '1px solid #e8e8ed', padding: '16px 16px 12px' }}>
+      <div style={{ background: '#ffffff', borderBottom: '1px solid #e8e8ed', padding: '12px 16px 10px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h1 style={{ fontSize: 20, margin: '0 0 4px', fontWeight: 700, color: '#1d1d1f' }}>抖音数据中心</h1>
-            <div style={{ fontSize: 12, color: '#86868b' }}>
+            <h1 style={{ fontSize: 18, margin: '0 0 2px', fontWeight: 700, color: '#1d1d1f' }}>抖音数据中心</h1>
+            <div style={{ fontSize: 11, color: '#86868b' }}>
               {dateFrom === dateTo ? dateFrom : `${dateFrom} ~ ${dateTo}`} · {allAccounts.length} 个账号
             </div>
           </div>
-          <a href="/" style={{ padding: '6px 14px', background: '#0071e3', color: 'white', textDecoration: 'none', borderRadius: 980, fontSize: 13, fontWeight: 500 }}>桌面版</a>
+          <a href="/" style={{ padding: '5px 12px', background: '#0071e3', color: 'white', textDecoration: 'none', borderRadius: 980, fontSize: 12, fontWeight: 500 }}>桌面版</a>
         </div>
       </div>
 
-      {/* Metric Cards - Swipeable */}
-      <div style={{ padding: '16px', display: 'flex', gap: 12, overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+      {/* Metric Cards — 收窄紧凑，4个一排 */}
+      <div style={{ padding: '12px 16px', display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
         {METRIC_KEYS.map(m => {
           const c = METRIC_CONFIG[m];
           const val = totals[m];
@@ -283,24 +305,25 @@ export default function MobileDashboardPage() {
               key={m}
               onClick={() => setActiveMetric(m)}
               style={{
-                flex: '0 0 calc(50% - 6px)',
-                borderRadius: 16,
+                flex: '0 0 calc(25% - 6px)',
+                minWidth: 72,
+                borderRadius: 12,
                 border: 'none',
                 cursor: 'pointer',
                 display: 'flex',
                 flexDirection: 'column',
                 padding: 0,
                 background: '#ffffff',
-                boxShadow: isActive ? `0 4px 16px ${c.color}28` : '0 1px 6px rgba(0,0,0,0.05)',
+                boxShadow: isActive ? `0 4px 12px ${c.color}28` : '0 1px 4px rgba(0,0,0,0.05)',
                 transition: 'all 0.2s ease',
               }}
             >
-              <div style={{ height: 44, background: c.color, display: 'flex', alignItems: 'center', padding: '0 14px', gap: 6, borderRadius: '16px 16px 0 0' }}>
-                <span style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(255,255,255,0.22)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#ffffff' }}>{c.icon}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#ffffff' }}>{c.label}</span>
+              <div style={{ height: 30, background: c.color, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '12px 12px 0 0' }}>
+                <span style={{ width: 18, height: 18, borderRadius: 4, background: 'rgba(255,255,255,0.22)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#ffffff' }}>{c.icon}</span>
               </div>
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '12px 14px' }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: '#1d1d1f' }}>{formatValue(val, m)}</div>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6px 2px' }}>
+                <div style={{ fontSize: 10, color: '#86868b', marginBottom: 1, whiteSpace: 'nowrap' }}>{c.label}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#1d1d1f', whiteSpace: 'nowrap' }}>{formatValue(val, m)}</div>
               </div>
             </button>
           );
@@ -308,15 +331,57 @@ export default function MobileDashboardPage() {
       </div>
 
       {/* Trend Chart */}
-      <div style={{ margin: '0 16px 16px', background: '#ffffff', borderRadius: 16, padding: 16, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f', marginBottom: 8 }}>{cfg.label}趋势</div>
-        <div style={{ height: 160 }}>
+      <div style={{ margin: '0 16px 12px', background: '#ffffff', borderRadius: 14, padding: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 6 }}>{cfg.label}趋势</div>
+        <div style={{ height: 140 }}>
           <canvas ref={trendCanvasRef} style={{ width: '100%', height: '100%' }} />
         </div>
       </div>
 
-      {/* Sort Bar */}
-      <div style={{ margin: '0 16px 12px', display: 'flex', gap: 8, overflowX: 'auto' }}>
+      {/* Search */}
+      <div style={{ margin: '0 16px 10px', position: 'relative' }}>
+        <input
+          type="text"
+          placeholder="搜索账号..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '8px 12px 8px 32px',
+            borderRadius: 10,
+            border: '1px solid #e8e8ed',
+            fontSize: 13,
+            background: '#ffffff',
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
+        <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: '#a1a1a6' }}>🔍</span>
+      </div>
+
+      {/* Status Filter + Sort */}
+      <div style={{ margin: '0 16px 10px', display: 'flex', gap: 6, overflowX: 'auto' }}>
+        {[
+          { key: 'all', label: '全部' },
+          { key: 'normal', label: '正常' },
+          { key: 'abnormal', label: '异常' },
+        ].map(s => (
+          <button
+            key={s.key}
+            onClick={() => setStatusFilter(s.key as any)}
+            style={{
+              padding: '5px 12px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer',
+              background: statusFilter === s.key ? '#34c759' : '#ffffff',
+              color: statusFilter === s.key ? 'white' : '#515154',
+              fontWeight: statusFilter === s.key ? 600 : 400,
+              whiteSpace: 'nowrap',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+            }}
+          >
+            {s.label}
+          </button>
+        ))}
+        <div style={{ width: 1, background: '#e8e8ed', margin: '2px 4px' }} />
         {[
           { key: 'metric', label: `按${cfg.label}` },
           { key: 'profit', label: '按利润' },
@@ -326,11 +391,12 @@ export default function MobileDashboardPage() {
             key={s.key}
             onClick={() => { if (sortKey === s.key) setSortDesc(!sortDesc); else { setSortKey(s.key as any); setSortDesc(true); } }}
             style={{
-              padding: '6px 14px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer',
-              background: sortKey === s.key ? '#0071e3' : '#f5f5f7',
+              padding: '5px 12px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer',
+              background: sortKey === s.key ? '#0071e3' : '#ffffff',
               color: sortKey === s.key ? 'white' : '#515154',
               fontWeight: sortKey === s.key ? 600 : 400,
               whiteSpace: 'nowrap',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
             }}
           >
             {s.label} {sortKey === s.key ? (sortDesc ? '↓' : '↑') : ''}
@@ -338,49 +404,54 @@ export default function MobileDashboardPage() {
         ))}
       </div>
 
+      {/* Result count */}
+      <div style={{ margin: '0 16px 8px', fontSize: 11, color: '#86868b' }}>
+        共 {sortedAccounts.length} 个账号
+      </div>
+
       {/* Account Cards */}
-      <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {sortedAccounts.map((a: any, i: number) => (
-          <div key={a.account} style={{ background: '#ffffff', borderRadius: 14, padding: 14, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#86868b', minWidth: 20 }}>{i + 1}</span>
-                <span style={{ fontSize: 15, fontWeight: 700, color: '#1d1d1f' }}>{a.account}</span>
+      <div style={{ padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {pagedAccounts.map((a: any, i: number) => (
+          <div key={a.account} style={{ background: '#ffffff', borderRadius: 12, padding: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#86868b', minWidth: 18 }}>{(page - 1) * pageSize + i + 1}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#1d1d1f' }}>{a.account}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: a._health?.grade === 'good' ? '#34c759' : a._health?.grade === 'warn' ? '#ff9500' : '#ff3b30' }} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: a._health?.grade === 'good' ? '#34c759' : a._health?.grade === 'warn' ? '#ff9500' : '#ff3b30' }}>{a._health?.total ?? '-'}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: a._health?.grade === 'good' ? '#34c759' : a._health?.grade === 'warn' ? '#ff9500' : '#ff3b30' }}>{a._health?.total ?? '-'}</span>
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 10, color: '#86868b', marginBottom: 2 }}>单量</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#0071e3' }}>{a._orders.toLocaleString()}</div>
+                <div style={{ fontSize: 9, color: '#86868b', marginBottom: 1 }}>单量</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#0071e3' }}>{a._orders.toLocaleString()}</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 10, color: '#86868b', marginBottom: 2 }}>净佣金</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#af52de' }}>¥{Math.round(a._netIncome).toLocaleString()}</div>
+                <div style={{ fontSize: 9, color: '#86868b', marginBottom: 1 }}>净佣金</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#af52de' }}>¥{Math.round(a._netIncome).toLocaleString()}</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 10, color: '#86868b', marginBottom: 2 }}>消耗</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#ff9500' }}>¥{Math.round(a._cost).toLocaleString()}</div>
+                <div style={{ fontSize: 9, color: '#86868b', marginBottom: 1 }}>消耗</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#ff9500' }}>¥{Math.round(a._cost).toLocaleString()}</div>
               </div>
               <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 10, color: '#86868b', marginBottom: 2 }}>利润</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: a._profit >= 0 ? '#34c759' : '#ff3b30' }}>¥{Math.round(a._profit).toLocaleString()}</div>
+                <div style={{ fontSize: 9, color: '#86868b', marginBottom: 1 }}>利润</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: a._profit >= 0 ? '#34c759' : '#ff3b30' }}>¥{Math.round(a._profit).toLocaleString()}</div>
               </div>
             </div>
             {/* Daily bars */}
             {displayDates.length > 0 && (
-              <div style={{ marginTop: 10, display: 'flex', gap: 2, alignItems: 'flex-end', height: 32 }}>
+              <div style={{ marginTop: 8, display: 'flex', gap: 2, alignItems: 'flex-end', height: 28 }}>
                 {displayDates.map(d => {
                   const v = a.daily?.[d]?.[activeMetric === 'orders' ? 'orders' : activeMetric === 'netIncome' ? 'netIncome' : activeMetric === 'cost' ? 'cost' : 'profit'] || 0;
                   const maxVal = Math.max(...displayDates.map(dd => a.daily?.[dd]?.[activeMetric === 'orders' ? 'orders' : activeMetric === 'netIncome' ? 'netIncome' : activeMetric === 'cost' ? 'cost' : 'profit'] || 0), 1);
-                  const h = Math.max(4, (v / maxVal) * 28);
+                  const h = Math.max(3, (v / maxVal) * 24);
                   return (
-                    <div key={d} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <div key={d} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                       <div style={{ width: '100%', height: h, borderRadius: 2, background: cfg.color, minHeight: 2 }} />
-                      <span style={{ fontSize: 8, color: '#a1a1a6' }}>{parseInt(d.slice(8))}</span>
+                      <span style={{ fontSize: 7, color: '#a1a1a6' }}>{parseInt(d.slice(8))}</span>
                     </div>
                   );
                 })}
@@ -390,35 +461,39 @@ export default function MobileDashboardPage() {
         ))}
       </div>
 
-      {/* Abnormal Alert */}
-      {abnormal.length > 0 && (
-        <div style={{ margin: '16px', background: '#ffffff', borderRadius: 14, padding: 14, boxShadow: '0 1px 6px rgba(0,0,0,0.05)' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#ff3b30', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>异常预警</span>
-            <span style={{ fontSize: 11, background: '#ff3b30', color: 'white', padding: '1px 6px', borderRadius: 10 }}>{abnormal.length}</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {abnormal.slice(0, 5).map((a: any) => (
-              <div key={a.account} style={{ padding: '8px 10px', background: '#fff5f5', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{a.account}</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#ff3b30' }}>{a._health?.total}分</span>
-              </div>
-            ))}
-            {abnormal.length > 5 && (
-              <div style={{ fontSize: 12, color: '#86868b', textAlign: 'center' }}>还有 {abnormal.length - 5} 个账号异常</div>
-            )}
-          </div>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ margin: '16px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+            style={{
+              padding: '6px 14px', borderRadius: 20, fontSize: 12, border: 'none',
+              cursor: page === 1 ? 'not-allowed' : 'pointer',
+              background: page === 1 ? '#f5f5f7' : '#0071e3', color: page === 1 ? '#a1a1a6' : 'white', fontWeight: 600,
+            }}
+          >上一页</button>
+          <span style={{ fontSize: 13, color: '#515154', fontWeight: 600, minWidth: 50, textAlign: 'center' }}>{page} / {totalPages}</span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+            style={{
+              padding: '6px 14px', borderRadius: 20, fontSize: 12, border: 'none',
+              cursor: page === totalPages ? 'not-allowed' : 'pointer',
+              background: page === totalPages ? '#f5f5f7' : '#0071e3', color: page === totalPages ? '#a1a1a6' : 'white', fontWeight: 600,
+            }}
+          >下一页</button>
         </div>
       )}
 
-      {/* Bottom Filter Bar */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#ffffff', borderTop: '1px solid #e8e8ed', padding: '8px 12px', display: 'flex', gap: 8, overflowX: 'auto', zIndex: 100, boxShadow: '0 -2px 10px rgba(0,0,0,0.04)' }}>
-        {['今日', '昨日', '近7天', '近30天', '本月'].map(p => (
+      {/* Bottom Date Filter Bar */}
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#ffffff', borderTop: '1px solid #e8e8ed', padding: '6px 10px', display: 'flex', gap: 6, overflowX: 'auto', zIndex: 100, boxShadow: '0 -2px 10px rgba(0,0,0,0.04)' }}>
+        {['今日', '昨日', '近7天', '近30天', '本月', '上月'].map(p => (
           <button
             key={p}
             onClick={() => setDatePreset(p)}
             style={{
-              padding: '6px 14px', borderRadius: 20, fontSize: 13, border: 'none', cursor: 'pointer',
+              padding: '5px 12px', borderRadius: 20, fontSize: 12, border: 'none', cursor: 'pointer',
               background: datePreset === p ? '#0071e3' : '#f5f5f7',
               color: datePreset === p ? 'white' : '#515154',
               fontWeight: datePreset === p ? 600 : 400,
