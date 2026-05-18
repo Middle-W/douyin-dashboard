@@ -7,7 +7,7 @@ import { savePending } from '@/lib/save-pending';
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-const PENDING_DIR = path.join(process.cwd(), 'pending-errors');
+const PENDING_DIR = '/tmp/douyin-pending-errors';
 
 function ensureDir() {
   if (!fs.existsSync(PENDING_DIR)) {
