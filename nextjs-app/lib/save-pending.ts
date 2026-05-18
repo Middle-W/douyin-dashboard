@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const PENDING_DIR = path.join(process.cwd(), 'pending-errors');
+const PENDING_DIR = path.join('/tmp', 'douyin-pending-errors');
 
 function ensureDir() {
   if (!fs.existsSync(PENDING_DIR)) {

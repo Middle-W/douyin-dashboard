@@ -89,6 +89,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400, headers: corsHeaders });
     }
 
+    // 如果有未匹配的，也保存到 pending（方便后续处理）
+    if (unmatched.length > 0) {
+      savePending('costs', date, rawCosts, `Partial match: ${costs.length}/${rawCosts.length} matched, ${unmatched.length} unmatched`, unmatched);
+    }
+
     const { error } = await supabaseAdmin
       .from('daily_costs')
       .upsert(costs, { onConflict: 'account_name,date' });
